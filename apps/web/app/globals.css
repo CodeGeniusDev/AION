@@ -1,0 +1,138 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #cfd5df;
+    --app-shell: #f3f6fb;
+    --sidebar: #edf2f8;
+    --surface: #ffffff;
+    --primary: #1769f3;
+    --primary-hover: #0f5ce0;
+    --primary-foreground: #ffffff;
+    --navy: #192438;
+    --text: #111318;
+    --muted-text: #74777f;
+    --border: #dfe3e8;
+    --soft-blue: #cbdcff;
+    --soft-peach: #fde7c5;
+    --soft-grey: #e5e5e9;
+    --soft-green: #ccebdd;
+    --foreground: #111318;
+    --card: #ffffff;
+    --card-foreground: #111318;
+    --secondary: #edf2f8;
+    --secondary-foreground: #192438;
+    --muted: #f0f3f7;
+    --muted-foreground: #74777f;
+    --accent: #edf2f8;
+    --accent-foreground: #192438;
+    --destructive: #d84444;
+    --destructive-foreground: #ffffff;
+    --input: #dfe3e8;
+    --ring: #1769f3;
+    --radius: 1.25rem;
+  }
+
+  :root[data-theme="dim"] {
+    --background: #bbc3cf;
+    --app-shell: #edf1f7;
+    --sidebar: #e4eaf2;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply min-h-screen text-foreground antialiased;
+    background: var(--background);
+    font-family: Inter, "Geist Sans", ui-sans-serif, system-ui, sans-serif;
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2;
+  }
+
+  progress {
+    appearance: none;
+    border: 0;
+    background: #e5e9ef;
+  }
+
+  progress::-webkit-progress-bar {
+    border-radius: 999px;
+    background: #e5e9ef;
+  }
+
+  progress::-webkit-progress-value {
+    border-radius: 999px;
+    background: var(--primary);
+  }
+
+  progress::-moz-progress-bar {
+    border-radius: 999px;
+    background: var(--primary);
+  }
+
+  @media (min-width: 1024px) {
+    :root[data-sidebar-collapsed="true"] [data-sidebar-desktop] {
+      width: 88px;
+    }
+
+    :root[data-sidebar-collapsed="true"] [data-sidebar-desktop] [data-sidebar-expanded] {
+      display: none;
+    }
+
+    :root[data-sidebar-collapsed="true"] [data-sidebar-desktop] [data-sidebar-collapsed-only] {
+      display: grid;
+    }
+
+    :root[data-sidebar-collapsed="true"] [data-sidebar-desktop] [data-sidebar-header] {
+      justify-content: center;
+      padding-right: 0.75rem;
+      padding-left: 0.75rem;
+    }
+
+    :root[data-sidebar-collapsed="true"] [data-sidebar-desktop] [data-sidebar-body] {
+      padding-right: 0.75rem;
+      padding-left: 0.75rem;
+    }
+
+    :root[data-sidebar-collapsed="true"] [data-sidebar-desktop] [data-sidebar-item] {
+      justify-content: center;
+      gap: 0;
+      padding-right: 0;
+      padding-left: 0;
+    }
+
+    :root[data-sidebar-collapsed="true"] [data-sidebar-desktop] [data-sidebar-footer] {
+      padding: 0.75rem;
+    }
+
+    :root[data-sidebar-collapsed="true"] [data-sidebar-desktop] [data-sidebar-collapse-button] {
+      position: absolute;
+      left: 70px;
+    }
+
+    :root[data-sidebar-collapsed="true"] [data-sidebar-desktop] [data-sidebar-collapse-icon] {
+      transform: rotate(180deg);
+    }
+  }
+}
+
+@layer utilities {
+  .scrollbar-subtle {
+    scrollbar-width: thin;
+    scrollbar-color: #c7cdd6 transparent;
+  }
+
+  .health-gauge {
+    background: conic-gradient(from 270deg at 50% 100%, var(--primary) 0deg 176deg, #e7ebf0 176deg 180deg, transparent 180deg 360deg);
+  }
+}

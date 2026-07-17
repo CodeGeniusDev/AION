@@ -1,0 +1,17 @@
+"use client";
+
+import { useState } from "react";
+import { Bell, Bot, Check, Monitor, Save, Settings2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/layout/page-header";
+import { SectionCard } from "@/components/ui/section-card";
+
+function Toggle({ label, description, initial = true }: { label: string; description: string; initial?: boolean }) {
+  const [enabled, setEnabled] = useState(initial);
+  return <label className="flex cursor-pointer items-center gap-4 py-3"><span><span className="block text-sm font-medium">{label}</span><span className="mt-1 block text-xs text-muted-text">{description}</span></span><span className={`relative ml-auto h-7 w-12 rounded-full transition-colors ${enabled ? "bg-primary" : "bg-[#d8dde4]"}`}><input type="checkbox" className="peer sr-only" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} /><span className={`absolute top-1 grid size-5 place-items-center rounded-full bg-white text-primary shadow-sm transition-transform ${enabled ? "translate-x-6" : "translate-x-1"}`}>{enabled && <Check className="size-3" />}</span></span></label>;
+}
+
+export function SettingsView() {
+  return <><PageHeader eyebrow="System preferences" title="Settings" description="Tune AION’s workspace behavior and interface for this device." action={<Button><Save className="mr-2 size-4" />Save Changes</Button>} /><div className="grid gap-5 p-4 sm:p-6 lg:grid-cols-2 lg:p-7"><SectionCard title="General" description="Basic workspace preferences" action={<Settings2 className="size-5 text-primary" />}><div className="space-y-4"><label className="block text-xs font-medium">Workspace name<input defaultValue="AION Workspace" className="mt-2 h-11 w-full rounded-full border px-4 text-sm" /></label><label className="block text-xs font-medium">Default view<select className="mt-2 h-11 w-full rounded-full border bg-white px-4 text-sm"><option>Dashboard</option><option>AI Chat</option><option>Tasks</option></select></label></div></SectionCard><SectionCard title="AI Model" description="Model selection is UI-only in this phase" action={<Bot className="size-5 text-primary" />}><label className="block text-xs font-medium">Preferred model<select className="mt-2 h-11 w-full rounded-full border bg-white px-4 text-sm"><option>Gemini 2.5 Pro</option><option>Gemini 2.5 Flash</option></select></label><div className="mt-4 rounded-[18px] bg-[#f4f7fb] p-4 text-xs leading-5 text-muted-text">Real model connections will be added after the agent orchestration layer is ready.</div></SectionCard><SectionCard title="Appearance" description="Choose how the workspace feels" action={<Monitor className="size-5 text-primary" />}><div className="grid grid-cols-3 gap-2">{["Light", "System", "Dim"].map((mode, index) => <button key={mode} type="button" className={`rounded-[18px] border p-3 text-xs font-medium ${index === 0 ? "border-primary bg-[#edf3ff] text-primary" : "bg-white"}`}>{mode}</button>)}</div></SectionCard><SectionCard title="Notifications" description="Control system updates" action={<Bell className="size-5 text-primary" />}><div className="divide-y"><Toggle label="Task completions" description="Notify when an agent finishes a task" /><Toggle label="System health" description="Notify when a connected service changes" /><Toggle label="Weekly summary" description="Receive a digest of recent AION activity" initial={false} /></div></SectionCard></div></>;
+}
+
