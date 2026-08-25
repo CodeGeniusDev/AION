@@ -1,4 +1,13 @@
-import type { ChatRequest, ChatResponse, DashboardData } from "@/types";
+import type {
+  AgentsResponse,
+  ChatRequest,
+  ChatResponse,
+  DashboardData,
+  MemoryResponse,
+  ResearchResponse,
+  TasksResponse,
+  WorkflowsResponse,
+} from "@/types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -28,4 +37,24 @@ export function sendChatMessage(payload: ChatRequest): Promise<ChatResponse> {
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+export function getAgents(): Promise<AgentsResponse> {
+  return request<AgentsResponse>("/api/agents");
+}
+
+export function getTasks(): Promise<TasksResponse> {
+  return request<TasksResponse>("/api/tasks");
+}
+
+export function getMemory(): Promise<MemoryResponse> {
+  return request<MemoryResponse>("/api/memory");
+}
+
+export function getWorkflows(): Promise<WorkflowsResponse> {
+  return request<WorkflowsResponse>("/api/workflows");
+}
+
+export function getResearch(): Promise<ResearchResponse> {
+  return request<ResearchResponse>("/api/research");
 }

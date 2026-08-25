@@ -2,13 +2,17 @@
 
 **AION — Artificial Intelligence Operating Nervous System**
 
-AION is an Artificial Intelligence Operating Nervous System where specialized AI agents collaborate, share context and work together as one intelligent system.
+AION is a multi-agent backend where specialized agents (Planner, Researcher,
+Critic, Memory) are dynamically selected per task via a capability-based
+"Cognitive DNA" registry, coordinate through an in-process publish/subscribe
+message bus, and have their output independently checked by a lexical
+verification layer before anything is written to persistent memory.
 
 ## Tech stack
 
-- **Frontend:** Next.js App Router, TypeScript, Tailwind CSS, shadcn/ui foundation, and Lucide React
-- **Backend:** Python, FastAPI, Uvicorn, Pydantic, and python-dotenv
-- **Testing:** ESLint, TypeScript, and Pytest
+- **Frontend:** Next.js App Router, TypeScript, Tailwind CSS, Lucide React
+- **Backend:** Python, FastAPI, Uvicorn, Pydantic, SQLite (stdlib `sqlite3`)
+- **Testing:** ESLint, TypeScript, Pytest
 - **Local orchestration:** Docker Compose
 
 ## Project structure
@@ -16,27 +20,28 @@ AION is an Artificial Intelligence Operating Nervous System where specialized AI
 ```text
 AION/
 ├── apps/
-│   ├── web/                  # Next.js frontend foundation
-│   │   ├── app/              # App Router pages
-│   │   ├── components/       # Shared layout and UI components
-│   │   ├── hooks/            # Future frontend hooks
-│   │   ├── services/         # Future frontend API clients
-│   │   ├── types/            # Shared TypeScript types
-│   │   └── utils/            # Frontend utilities
+│   ├── web/                  # Next.js frontend
+│   │   ├── app/               # App Router pages (dashboard, chat, agents, tasks, memory, research, workflows, settings)
+│   │   ├── components/        # UI components per page
+│   │   ├── services/api.ts    # Backend API client
+│   │   └── types/             # Shared TypeScript types
 │   └── api/                  # FastAPI backend
-│       ├── agents/           # Agent placeholders
-│       ├── cognitive_bus/    # Cognitive message schema and bus placeholder
-│       ├── database/         # Supabase placeholder
-│       ├── memory/           # pgvector placeholder
-│       ├── models/           # Pydantic request and response models
-│       ├── orchestration/    # Routing, workflow execution, and synthesis
-│       ├── routes/           # API route modules
-│       ├── services/         # Service layer and integration placeholders
-│       ├── tests/            # Backend tests
-│       └── main.py           # FastAPI application
-├── research/                 # Architecture research and notes
-├── .env.example
-├── .gitignore
+│       ├── agents/            # Agent implementations + Cognitive DNA registry
+│       ├── auth/               # API-key auth, hashing, tenant resolution (opt-in)
+│       ├── cognitive_bus/      # Task-scoped publish/subscribe message bus
+│       ├── database/           # Placeholder for a future Postgres/Supabase backend (unused — SQLite is the real backend)
+│       ├── evaluation/         # Benchmark dataset + evaluator for comparing routing configurations
+│       ├── immune/              # Claim extraction + lexical verification layer
+│       ├── memory/              # SQLite-backed Cognitive Memory store (real, persistent)
+│       ├── models/              # Pydantic request/response and internal schemas
+│       ├── observability/       # Structured logging, request/correlation IDs, rate limiting
+│       ├── orchestration/       # WorkflowRunner, Dynamic Brain Formation, Research Pipeline
+│       ├── routes/              # API route modules
+│       ├── services/            # Route-facing service layer (some real, some demo — see API routes table)
+│       ├── tools/               # Tool registry/executor + built-in deterministic tools
+│       ├── tests/               # Backend test suite (334 tests)
+│       └── main.py              # FastAPI application entry point
+├── research/                 # Architecture notes
 ├── docker-compose.yml
 └── README.md
 ```
@@ -45,14 +50,12 @@ AION/
 
 ```bash
 cd apps/web
-cp .env.example .env.local
 npm install
 npm run dev
 ```
 
-The frontend is available at [http://localhost:3000](http://localhost:3000). The root route redirects to `/dashboard`. The responsive application includes Dashboard, AI Chat, Tasks, Agents, Workflows, Memory, Research, and Settings pages.
-
-Useful frontend checks:
+Available at [http://localhost:3000](http://localhost:3000). Pages: Dashboard,
+AI Chat, Tasks, Agents, Memory, Research, Workflows, Settings.
 
 ```bash
 npm run lint
@@ -62,60 +65,68 @@ npm run build
 
 ## Backend setup
 
-From the repository root:
-
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r apps/api/requirements.txt
-cp apps/api/.env.example apps/api/.env
+cp apps/api/.env.example apps/api/.env   # fill in real values locally; never commit this file
 cd apps/api
 uvicorn main:app --reload --port 8000
 ```
 
-The API is available at [http://localhost:8000](http://localhost:8000), with interactive documentation at [http://localhost:8000/docs](http://localhost:8000/docs).
-
-Run backend tests from `apps/api` while the virtual environment is active:
+Available at [http://localhost:8000](http://localhost:8000), docs at
+[http://localhost:8000/docs](http://localhost:8000/docs).
 
 ```bash
+cd apps/api
 pytest
 ```
 
 ## API routes
 
-| Method | Route | Purpose |
+| Method | Route | Data source |
 | --- | --- | --- |
-| `GET` | `/` | API availability message |
-| `GET` | `/health` | Service health status |
-| `GET` | `/api/dashboard` | Demo dashboard metrics, tasks, and agent activity |
-| `POST` | `/api/chat` | AION routing and unified multi-agent response |
+| `GET` | `/` , `/health` | Static |
+| `POST` | `/api/chat` | **Real** — full pipeline: Dynamic Brain Formation → Agents → Cognitive Bus → Immune verification → Cognitive Memory write-back |
+| `GET` | `/api/agents` | **Real** — live Cognitive DNA Agent Registry |
+| `GET` | `/api/tasks`, `/api/tasks/{id}` | **Real** — derived from episodic Cognitive Memory records (no dedicated Task entity exists; this is the closest real data) |
+| `GET` | `/api/memory` | **Real** — live counts from the SQLite-backed Cognitive Memory store |
+| `GET` | `/api/research` | **Real** — Immune-verified semantic memory records tagged as research findings |
+| `GET` | `/api/dashboard` | **Real** — aggregated from the Agent Registry and Cognitive Memory store |
+| `GET` | `/api/workflows` | **Demo data.** No backend "Workflow" entity exists (no reusable workflow templates or execution store) — documented in `routes/workflows.py` rather than faked |
 
 ### Chat orchestration
 
-The chat API accepts four modes: `auto`, `quick`, `research`, and `manual`. Every successful response is authored by `AION`; specialist output is combined into one answer, while the UI receives only safe process summaries.
+`POST /api/chat` accepts four modes: `auto`, `quick`, `research`, `manual`.
+For `auto` mode, required agent domains are inferred from the message via
+deterministic phrase matching, then resolved against the live Agent
+Registry by capability (Dynamic Brain Formation) — not a hardcoded
+keyword-to-agent map. If no agent can be confidently selected for a
+required domain, it falls back to a simpler keyword router rather than
+failing the request.
 
-```json
-{
-  "message": "Research the future of solar energy in Pakistan",
-  "mode": "auto",
-  "selected_agents": [],
-  "conversation_id": "optional-id",
-  "memory_enabled": true,
-  "verification_enabled": true
-}
-```
+Every response is authored by `AION`. `used_agents`, `confidence`,
+`processing_time_ms`, and `revision_count` reflect what actually happened
+during that request — nothing is invented. `development_mode: true` means
+no live model call was made (see Gemini section below).
 
-The response includes `used_agents`, deterministic `confidence`, complete `processing_time_ms`, `selection_summary`, sources, and a safe error field. When Gemini is unavailable, AION returns a clearly marked development-mode response without crashing.
+## Gemini (optional)
 
-Initial routing rules:
+AION works fully without a Gemini API key — agents fall back to
+deterministic template responses, and this is clearly reported via
+`development_mode: true` in every `/api/chat` response. Setting
+`GEMINI_API_KEY` in `apps/api/.env` enables real model calls; when unset,
+`GeminiService.is_configured()` returns `False` and no live call is
+attempted. AION never reports a live model response as having succeeded
+when it did not.
 
-- Plans, roadmaps, steps, and strategy use Planner.
-- Research, comparisons, and analysis use Planner, Researcher, and Critic.
-- Reviews and verification use Critic.
-- Previous or saved context requests include Memory.
-- Simple requests use a direct AION response.
+## Environment variables
 
-Confidence starts at `0.50`, adds agent completion, critic approval, verification, and source signals, then subtracts model-fallback and agent-error penalties. It is never random.
+See `apps/api/.env.example` for the complete, current list — copy it to
+`apps/api/.env` and fill in real values locally. It documents every
+variable actually read by `config.py`, including authentication, rate
+limiting, task retention, and logging settings added during later
+hardening passes. Never commit a real `.env` file.
 
 ## Run with Docker Compose
 
@@ -123,17 +134,22 @@ Confidence starts at `0.50`, adds agent completion, critic approval, verificatio
 docker compose up --build
 ```
 
-## Environment variables
+`docker-compose.yml` loads `apps/api/.env` (a real, git-ignored file you
+create locally) — never `.env.example`, which intentionally contains no
+real values.
 
-The checked-in `.env.example` files contain safe placeholders only. Copy them to local `.env` files and never commit actual credentials.
+## Known limitations
 
-```env
-GEMINI_API_KEY=
-DATABASE_URL=
-NEXT_PUBLIC_API_URL=http://localhost:8000
-AION_DISABLE_MODEL_CALLS=0
-```
-
-## Current development status
-
-**Phase 3 — AION orchestration.** Chat now defaults to AION Auto, routes tasks to the smallest useful agent set, runs a controlled workflow through the Cognitive Bus, and returns one final AION response with safe process summaries, confidence, and timing. The interface also supports Quick Answer, Research Team, and Manual Agents modes. Live sources, durable memory, LangGraph, Supabase PostgreSQL, pgvector persistence, streaming progress, and cancellation remain future work.
+- **SQLite is the only implemented persistence backend.** `database/` and
+  `memory/pgvector.py` are explicit, documented placeholders for a future
+  Postgres/pgvector backend — not active in any configuration.
+- **Single-process only.** The Cognitive Bus, Agent Registry, and rate
+  limiter are in-memory and do not coordinate across multiple server
+  instances.
+- **`/api/workflows` is demo data** — no backend Workflow entity exists.
+- **Tenant isolation covers Cognitive Memory only** (the one subsystem with
+  real cross-request query risk); the Cognitive Bus and Tool/Research
+  layers remain task-scoped, not tenant-scoped.
+- **Authentication is opt-in** (`AION_REQUIRE_AUTH=0` by default) so the
+  existing frontend, which does not send an API key, keeps working
+  unmodified.

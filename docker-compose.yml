@@ -14,6 +14,12 @@ services:
       context: ./apps/api
     ports:
       - "8000:8000"
+    # Loads apps/api/.env — a real, git-ignored file the operator creates
+    # locally (copy apps/api/.env.example to apps/api/.env and fill in
+    # real values). NEVER point this at .env.example: that file only
+    # documents which variables exist and intentionally contains no real
+    # values, so using it as the runtime source would silently start the
+    # API with every credential empty.
     env_file:
-      - ./apps/api/.env.example
+      - ./apps/api/.env
 
