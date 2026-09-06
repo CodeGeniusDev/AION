@@ -1,0 +1,172 @@
+{
+  "schema": "better-harness/findings@1",
+  "generated_at": "2026-09-06T22:36:31+05:00",
+  "project": {
+    "name": "AION",
+    "tagline": "Artificial Intelligence Operating Nervous System — specialized AI agents collaborating as one system",
+    "workspace": "/Users/abdullahabad/AbdullahAbbad-Portfolio/AION/AION",
+    "architecture": "Monorepo: apps/api (FastAPI + agent orchestration) and apps/web (Next.js App Router + Tailwind + shadcn-style UI)",
+    "phase": "Phase 3 — AION orchestration (chat routing, cognitive bus, deterministic confidence)"
+  },
+  "verification_snapshot": {
+    "backend_tests": "16 passed in 1.37s (pytest, no credentials required)",
+    "frontend_gates": "eslint --max-warnings=0: pass; tsc --noEmit: pass",
+    "frontend_tests": "0 (no component/e2e tests exist)",
+    "ci_workflows": "0",
+    "docker": "docker-compose.yml + 2 Dockerfiles present (not exercised in this run)"
+  },
+  "harness_scores": {
+    "overall": 6.4,
+    "verdict": "Strong local verification loop, missing enforcement layer",
+    "derivation": "Holistic, verification-weighted judgment of what exists today (arithmetic mean of the eight dimensions is 5.6; the zero CI dimension is a categorical absence rather than poor quality, so the mean understates the working local loop)",
+    "dimensions": {
+      "bootstrap": 8.0,
+      "backend_verification": 8.5,
+      "frontend_verification": 4.0,
+      "ci_automation": 0.0,
+      "agent_conventions": 4.0,
+      "error_containment": 9.0,
+      "dependency_management": 7.0,
+      "repo_hygiene": 4.5
+    }
+  },
+  "strengths": [
+    {
+      "id": "S1",
+      "title": "Secret-free deterministic test loop",
+      "category": "verification",
+      "evidence": "apps/api/tests/conftest.py forces AION_DISABLE_MODEL_CALLS=1 and shims sys.path; all 16 tests pass in 1.37s with no API keys and no network",
+      "impact": "Any agent or contributor can self-verify backend changes instantly, without credentials or flaky external calls"
+    },
+    {
+      "id": "S2",
+      "title": "Dependency injection makes failure paths testable",
+      "category": "verification",
+      "evidence": "WorkflowRunner accepts an agents dict; tests inject FailingPlanner and RejectingCritic fakes to assert agent-failure safety, single-retry critic limits, and exact confidence math (0.82)",
+      "impact": "Error handling and scoring are contract-tested, not just happy paths — regressions in safety behavior get caught"
+    },
+    {
+      "id": "S3",
+      "title": "Graceful degradation instead of crashes",
+      "category": "error_containment",
+      "evidence": "GeminiService.generate returns None when unconfigured or on HTTP/parsing errors; BaseAgent.fallback produces a development-mode response; responses surface development_mode explicitly",
+      "impact": "The system runs end-to-end with zero credentials, and model outages degrade to clearly marked dev-mode output"
+    },
+    {
+      "id": "S4",
+      "title": "README doubles as a bootstrap contract",
+      "category": "bootstrap",
+      "evidence": "README.md documents setup for both apps, env variables, API route table, chat routing rules, the confidence formula, and current phase status",
+      "impact": "A fresh agent or human can orient and start working without asking questions"
+    },
+    {
+      "id": "S5",
+      "title": "Strict static gates on the frontend",
+      "category": "verification",
+      "evidence": "package.json scripts run eslint . --max-warnings=0 and tsc --noEmit; both exit 0 on the current tree",
+      "impact": "Zero-warning policy keeps the codebase from drifting into unenforceable lint debt"
+    },
+    {
+      "id": "S6",
+      "title": "Clean environment-variable hygiene",
+      "category": "bootstrap",
+      "evidence": "Three .env.example files (root, apps/api, apps/web) contain safe placeholders only; .gitignore excludes .env variants while negating !.env.example",
+      "impact": "Secrets never enter history; required configuration is discoverable at every level"
+    },
+    {
+      "id": "S7",
+      "title": "Safe error surfaces, tested for leak prevention",
+      "category": "error_containment",
+      "evidence": "main.py installs a global exception handler returning a generic 500; test_agent_failure_returns_safe_aion_error asserts internal detail ('simulated') never reaches the user-facing answer",
+      "impact": "Internal failures cannot leak stack traces or provider details to clients"
+    },
+    {
+      "id": "S8",
+      "title": "Bounded, pinned dependencies",
+      "category": "dependency_management",
+      "evidence": "requirements.txt uses >=x,<major ranges for all six packages; Dockerfiles pin python:3.13-slim and node:22-alpine with a multi-stage standalone web build",
+      "impact": "Rebuilds stay reproducible and surprise major-version upgrades are blocked"
+    }
+  ],
+  "gaps": [
+    {
+      "id": "G1",
+      "title": "No CI pipeline at all",
+      "category": "ci_automation",
+      "severity": "high",
+      "evidence": "No .github/workflows, no other CI config anywhere in the repo; pytest/lint/typecheck gates exist only as local knowledge",
+      "impact": "Nothing enforces the green state this project already achieves locally; one bad merge can silently break the loop",
+      "fix": "Add a ~30-line GitHub Actions workflow running pytest in apps/api and npm ci + lint + typecheck + build in apps/web on push/PR"
+    },
+    {
+      "id": "G2",
+      "title": "No agent convention file",
+      "category": "agent_conventions",
+      "severity": "medium",
+      "evidence": "No AGENTS.md, CLAUDE.md, or .cursorrules; the cwd requirement (pytest must run from apps/api because conftest shims sys.path) and the AION_DISABLE_MODEL_CALLS flag are only discoverable by reading conftest.py",
+      "impact": "AI assistants rediscover project rules by trial and error, wasting turns and risking wrong commands",
+      "fix": "Add a root AGENTS.md listing the interpreter path (.venv), where to run each command, and the dev-mode flag"
+    },
+    {
+      "id": "G3",
+      "title": "Frontend has zero behavioral tests",
+      "category": "frontend_verification",
+      "severity": "medium",
+      "evidence": "No Vitest/Jest/Playwright setup; README honestly lists testing as 'ESLint, TypeScript, and Pytest'; the in-progress alert/ feature is unverifiable beyond static checks",
+      "impact": "UI regressions (routing, chat roundtrip, mode switching) ship undetected",
+      "fix": "Add Playwright smoke tests for the 8 pages plus one chat roundtrip against the dev-mode API"
+    },
+    {
+      "id": "G4",
+      "title": "docker-compose wires the example env, not real env",
+      "category": "bootstrap",
+      "severity": "medium",
+      "evidence": "docker-compose.yml api service uses env_file: ./apps/api/.env.example; no healthchecks on either service",
+      "impact": "Compose always runs in dev-mode with no Gemini key, and containers have no readiness gating",
+      "fix": "Point env_file at apps/api/.env with documented fallback, and add healthchecks (curl /health, wget /)"
+    },
+    {
+      "id": "G5",
+      "title": "Repo hygiene drift",
+      "category": "repo_hygiene",
+      "severity": "medium",
+      "evidence": "3 of 5 commits share the message 'Development Commands'; working tree holds 3 modified files and an untracked apps/web/app/alert/ feature",
+      "impact": "Low-signal history and uncommitted work make bisecting and agent navigation via git unreliable",
+      "fix": "Commit or stash WIP, and adopt conventional commits (feat/fix/chore) for future changes"
+    },
+    {
+      "id": "G6",
+      "title": "No single verification entrypoint",
+      "category": "ci_automation",
+      "severity": "low",
+      "evidence": "Verification requires chaining commands from two README sections across two directories; no Makefile/justfile/root script",
+      "impact": "Multi-step verification invites skipped steps, especially for automated agents",
+      "fix": "Add a root make check (or npm script) chaining backend pytest + frontend lint/typecheck/build"
+    },
+    {
+      "id": "G7",
+      "title": "Runtime version drift between local and container",
+      "category": "dependency_management",
+      "severity": "low",
+      "evidence": "Local .venv is Python 3.14 while the API Dockerfile pins python:3.13-slim; pytest also emits a Starlette TestClient deprecation warning (httpx/httpx2 transition)",
+      "impact": "Code verified locally on 3.14 may behave differently in the 3.13 container; deprecation signals a coming break",
+      "fix": "Align .venv and Dockerfile on one Python minor version and plan the httpx2 migration"
+    },
+    {
+      "id": "G8",
+      "title": "Test dependencies mixed into runtime requirements",
+      "category": "dependency_management",
+      "severity": "low",
+      "evidence": "requirements.txt ships pytest alongside fastapi/uvicorn/pydantic for production images",
+      "impact": "Production containers carry test tooling; dependency intent is blurred",
+      "fix": "Split into requirements.txt + requirements-dev.txt (httpx stays runtime-adjacent for TestClient only in dev)"
+    }
+  ],
+  "top_recommendations": [
+    "Add a minimal GitHub Actions CI matrix: pytest (apps/api) and lint+typecheck+build (apps/web) — highest leverage, the local loop already proves it will pass",
+    "Write a root AGENTS.md capturing interpreter path, per-app working directories, and the AION_DISABLE_MODEL_CALLS dev-mode flag",
+    "Create a one-command check entrypoint (make check) that chains every gate in the right directory",
+    "Introduce Playwright smoke coverage for the 8 routes and one chat roundtrip before the UI surface grows further",
+    "Fix compose env wiring (.env with fallback + healthchecks) and switch to conventional commit messages"
+  ]
+}
