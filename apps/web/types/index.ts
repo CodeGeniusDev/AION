@@ -66,6 +66,7 @@ export type ChatMessage =
   | { id: string; role: "assistant"; response: ChatResponse };
 
 export interface AgentCardData {
+  id?: string;
   name: string;
   description: string;
   status: AgentState;
@@ -74,9 +75,55 @@ export interface AgentCardData {
 }
 
 export interface WorkflowData {
+  id?: string;
   name: string;
   description: string;
   agents: string[];
   runs: number;
   state: "Ready" | "Running";
+}
+
+export interface AgentsResponse {
+  items: AgentCardData[];
+  total: number;
+}
+
+export interface TasksResponse {
+  items: RecentTask[];
+  total: number;
+}
+
+export interface WorkflowsResponse {
+  items: WorkflowData[];
+  total: number;
+}
+
+export type MemoryType = "short_term" | "long_term" | "vector";
+
+export interface MemoryCategory {
+  id: string;
+  title: string;
+  description: string;
+  type: MemoryType;
+  count: string;
+  usage: number;
+}
+
+export interface MemoryResponse {
+  categories: MemoryCategory[];
+  policies: string[];
+}
+
+export type ResearchNoteType = "Architecture note" | "Experiment" | "Working draft";
+
+export interface ResearchNote {
+  id: string;
+  title: string;
+  type: ResearchNoteType;
+  date: string;
+}
+
+export interface ResearchResponse {
+  items: ResearchNote[];
+  total: number;
 }
