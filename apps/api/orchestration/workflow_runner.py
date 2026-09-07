@@ -22,7 +22,7 @@ from orchestration.brain_former import DynamicBrainFormer, brain_to_routing_deci
 from orchestration.research_pipeline import ResearchPipeline
 from orchestration.response_synthesizer import ResponseSynthesizer
 from models.knowledge import ResearchResult
-from services.gemini import GeminiService, live_response_generated
+from services.gemini import GeminiService, is_circuit_open, live_response_generated
 from tools.executor import ToolExecutor
 from tools.knowledge_providers import build_knowledge_registry
 from tools.schema import tools_to_declarations, message_needs_tools
@@ -274,6 +274,61 @@ class WorkflowRunner:
                     context={"count": len(retrieved), "memory_ids": [r.record.memory_id for r in retrieved]},
                     status="completed",
                 ))
+
+        # ── Quick mode fast path: exactly 1 Gemini API call ─────────
+        # Skip tool invocation, agent routing, agent execution, synthesis,
+        # and critic review. A single direct Gemini call handles the entire
+        # request. This is the most quota-efficient path for free-tier keys
+        # (20 requests/day): quick mode = 1 call vs auto mode = 3-5 calls.
+        if request.mode == "quick":
+            # Early exit if circuit breaker is open (429 cooldown active)
+            if is_circuit_open():
+                elapsed = max(1, round((perf_counter() - started) * 1000))
+                bus.publish(CognitiveMessage(
+                    task_id=task_id, source_agent="aion", target_agent=None,
+                    intent="task_failed", content="Gemini rate limit active — try again in ~60s",
+                    status="failed",
+                ))
+                return ChatResponse(
+                    task_id=task_id, conversation_id=conversation_id,
+                    answer="The AI model is rate-limited. Please wait about 60 seconds and try again.",
+                    mode="quick", status="failed", used_agents=[], confidence=0.2,
+                    processing_time_ms=elapsed,
+                    selection_summary="Quick Answer — rate limited.", error="Gemini rate limit active.",
+                )
+            memory_hint = f"\n\nContext from previous conversations: {'; '.join(memories[:3])}" if memories else ""
+            direct_answer = await self.model_service.generate(
+                "You are AION, a helpful AI assistant. Answer clearly, concisely, and accurately." + memory_hint,
+                request.message,
+            )
+            elapsed = max(1, round((perf_counter() - started) * 1000))
+            development_mode = not live_response_generated.get()
+            if direct_answer:
+                status = "completed"
+                confidence = self.calculate_confidence(
+                    total_agents=0, completed_agents=0, critic_approved=False,
+                    verification_enabled=False, source_count=0, error_count=0,
+                    development_mode=development_mode,
+                )
+            else:
+                status = "failed"
+                direct_answer = "The AI model is currently unavailable. Please try again in a moment."
+                confidence = 0.2
+            bus.publish(CognitiveMessage(
+                task_id=task_id, source_agent="aion", target_agent=None,
+                intent="task_completed" if status == "completed" else "task_failed",
+                content=f"Quick answer {status} in {elapsed}ms",
+                context={"status": status}, status="completed" if status == "completed" else "failed",
+            ))
+            return ChatResponse(
+                task_id=task_id, conversation_id=conversation_id,
+                answer=direct_answer, mode="quick", status=status,
+                used_agents=[], confidence=confidence, processing_time_ms=elapsed,
+                selection_summary="Quick Answer — direct AION response (1 call).",
+                error=None if status == "completed" else direct_answer,
+                development_mode=development_mode,
+            )
+
         if self.use_dynamic_brain:
             brain = self.brain_former.form(
                 task_id=task_id,
@@ -308,9 +363,10 @@ class WorkflowRunner:
         # tool-capable intent (math, time, text analysis). This avoids an
         # expensive Gemini function-calling round-trip for the vast majority
         # of messages that don't need computation.
+        # Also skip if circuit breaker is open (429 cooldown active).
         tool_results: list[str] = []
         tool_identities = self.tool_executor.registry.list_identities()
-        if tool_identities and self.model_service.is_configured() and message_needs_tools(request.message):
+        if tool_identities and self.model_service.is_configured() and not is_circuit_open() and message_needs_tools(request.message):
             declarations = tools_to_declarations(tool_identities)
 
             async def _execute_tool_fn(name: str, args: dict) -> str:
@@ -345,6 +401,31 @@ class WorkflowRunner:
         # free-tier keys (~15 RPM). A 1s stagger between agent starts
         # spreads the API calls over time while keeping most of the
         # parallel latency benefit.
+
+        # ── Agent cap for free-tier quota ──────────────────────────
+        # Limit to 2 agents maximum to conserve Gemini API quota.
+        # Free-tier allows ~20 requests/day; each agent = 1 API call
+        # + 1 synthesis = minimum 3 calls per auto-mode message.
+        # Without this cap, research intent triggers 3 agents + synth
+        # + critic = 5-7 calls, exhausting quota in 2-3 messages.
+        _MAX_AGENTS = 2
+        execution_order = list(decision.execution_order)
+        selected_agents = list(decision.selected_agents)
+        if len(execution_order) > _MAX_AGENTS:
+            logger.info("agent_cap_applied original=%d capped=%d", len(execution_order), _MAX_AGENTS)
+            execution_order = execution_order[:_MAX_AGENTS]
+            selected_agents = selected_agents[:_MAX_AGENTS]
+
+        # If circuit breaker is open, skip agents entirely — they would
+        # all fail and just burn more quota.
+        if is_circuit_open():
+            logger.info("agents_skipped reason=circuit_breaker_open")
+            for agent_id in execution_order:
+                errors += 1
+                agent = self.agents[agent_id]
+                used_agents.append(UsedAgent(id=agent_id, name=agent.name, status="failed", summary="Skipped — rate limit cooldown active"))
+            execution_order = []  # empty so gather below is a no-op
+
         async def _run_agent(agent_id: str, stagger_delay: float) -> tuple[str, str | None, str, float]:
             """Run a single agent, returning (agent_id, output_or_None, summary, latency_ms)."""
             if stagger_delay > 0:
@@ -364,7 +445,7 @@ class WorkflowRunner:
                 return (agent_id, None, "Could not complete the assigned step", latency)
 
         # Publish "execute" messages for all agents
-        for agent_id in decision.execution_order:
+        for agent_id in execution_order:
             bus.publish(CognitiveMessage(task_id=task_id, source_agent="aion", target_agent=agent_id, intent="execute", content=request.message, status="processing"))
 
         # Stagger agent starts by 1s each to avoid burst rate-limiting.
@@ -373,7 +454,7 @@ class WorkflowRunner:
         _STAGGER_DELAY = 1.0 if settings.model_calls_enabled else 0.0
         results = await asyncio.gather(*[
             _run_agent(aid, i * _STAGGER_DELAY)
-            for i, aid in enumerate(decision.execution_order)
+            for i, aid in enumerate(execution_order)
         ])
 
         for agent_id, output, summary, latency in results:
@@ -392,33 +473,33 @@ class WorkflowRunner:
         # Include tool results at the beginning of outputs for synthesis
         all_outputs = tool_results + outputs
         draft = await self.synthesizer.synthesize(request.message, all_outputs, self.model_service)
-        if "critic" in decision.selected_agents and request.verification_enabled:
-            critic = self.agents["critic"]
-            if isinstance(critic, CriticAgent):
-                critic_approved, issues = await critic.review_with_llm(draft, request.message, self.model_service)
-                if not critic_approved:
-                    logger.info("critic_issues task_id=%s issues=%d", task_id, len(issues))
-                    draft = await self.synthesizer.revise(request.message, draft, self.model_service)
-                    revision_count = 1
-                    critic_approved, _ = await critic.review_with_llm(draft, request.message, self.model_service)
+        # ── Skip critic LLM review for quota conservation ─────────
+        # The critic's review_with_llm() makes 1-3 additional Gemini calls
+        # (review + possible revision + re-review). On free-tier (20/day)
+        # this is too expensive. The immune system (below) provides
+        # independent verification without API calls.
+        # if "critic" in decision.selected_agents and request.verification_enabled:
+        #     critic = self.agents["critic"]
+        #     if isinstance(critic, CriticAgent):
+        #         critic_approved, issues = await critic.review_with_llm(draft, request.message, self.model_service)
 
         if self.enable_immune:
             self._run_immune_evaluation(task_id=task_id, draft=draft, agent_outputs=agent_outputs, memories=memories, bus=bus)
 
-        status = "failed" if decision.selected_agents and errors == len(decision.selected_agents) else "completed"
+        status = "failed" if selected_agents and errors == len(selected_agents) else "completed"
 
         if self.enable_memory_persistence:
             required_domains = [domain.value for domain in brain.required_domains] if self.use_dynamic_brain else []
             await self._consolidate_memory(
-                task_id=task_id, mode=request.mode, execution_order=decision.execution_order,
+                task_id=task_id, mode=request.mode, execution_order=execution_order,
                 decision_reason=decision.reason, status=status, required_domains=required_domains, bus=bus,
                 tenant_id=tenant_id,
             )
         logger.info("task_completed task_id=%s status=%s errors=%s", task_id, status, errors)
         development_mode = not live_response_generated.get()
         confidence = self.calculate_confidence(
-            total_agents=len(decision.selected_agents),
-            completed_agents=len(decision.selected_agents) - errors,
+            total_agents=len(selected_agents),
+            completed_agents=len(selected_agents) - errors,
             critic_approved=critic_approved,
             verification_enabled=request.verification_enabled,
             source_count=0,
