@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowUpRight, Network, Plus, Route } from "lucide-react";
+import { ArrowUpRight, Lock, Network, Route } from "lucide-react";
 import { getWorkflows } from "@/services/api";
 import type { WorkflowData } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { PageHeader } from "@/components/layout/page-header";
+import { Tooltip } from "@/components/ui/tooltip";
 
 export function WorkflowsView() {
   const [workflows, setWorkflows] = useState<WorkflowData[]>([]);
@@ -39,7 +40,19 @@ export function WorkflowsView() {
 
   return (
     <>
-      <PageHeader eyebrow="Agent orchestration" title="Workflows" description="Reusable paths that coordinate specialists from first request to reviewed result." action={<Button><Plus className="mr-2 size-4" />New Workflow</Button>} />
+      <PageHeader
+        eyebrow="Agent orchestration"
+        title="Workflows"
+        description="Reusable paths that coordinate specialists from first request to reviewed result."
+        action={
+          <Tooltip content="Custom workflow creation coming soon">
+            <Button disabled>
+              <Lock className="mr-2 size-3.5" />
+              New Workflow
+            </Button>
+          </Tooltip>
+        }
+      />
       <div className="p-4 sm:p-6 lg:p-7">
         {loading ? (
           <div aria-label="Loading workflows" className="grid gap-5 lg:grid-cols-3">
@@ -76,9 +89,16 @@ export function WorkflowsView() {
                 </div>
                 <div className="mt-auto flex items-center border-t pt-5 text-xs text-muted-text">
                   <span>{workflow.runs} total runs</span>
-                  <button type="button" className="ml-auto grid size-9 place-items-center rounded-full bg-navy text-white" aria-label={`Open ${workflow.name}`}>
-                    <ArrowUpRight className="size-4" />
-                  </button>
+                  <Tooltip content="Workflow execution coming soon">
+                    <button
+                      type="button"
+                      disabled
+                      className="ml-auto grid size-9 place-items-center rounded-full bg-[#c6ccd5] text-white cursor-not-allowed"
+                      aria-label={`Open ${workflow.name} (coming soon)`}
+                    >
+                      <ArrowUpRight className="size-4" />
+                    </button>
+                  </Tooltip>
                 </div>
               </article>
             ))}

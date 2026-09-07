@@ -11,6 +11,7 @@ from observability.context import bind_request_context, reset_request_context
 from observability.logging_config import configure_logging, get_logger
 from routes.agents import router as agents_router
 from routes.chat import router as chat_router
+from routes.alerts import router as alerts_router
 from routes.dashboard import router as dashboard_router
 from routes.events import router as events_router
 from routes.feedback import router as feedback_router
@@ -78,6 +79,7 @@ app.include_router(memory_router, prefix="/api")
 app.include_router(settings_router, prefix="/api")
 app.include_router(workflows_router, prefix="/api")
 app.include_router(research_router, prefix="/api")
+app.include_router(alerts_router, prefix="/api")
 
 
 @app.exception_handler(Exception)

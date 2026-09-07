@@ -38,6 +38,7 @@ export function ChatView() {
   const [selectedAgents, setSelectedAgents] = useState<AgentId[]>([]);
   const [sending, setSending] = useState(false);
   const [failedPrompt, setFailedPrompt] = useState<string | null>(null);
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | undefined>(
     undefined,
   );
@@ -122,6 +123,7 @@ export function ChatView() {
       return;
     setActiveChat((current) => current ?? "new-chat");
     setFailedPrompt(null);
+    setErrorDetail(null);
     setMessages((current) => {
       const retained = replaceId
         ? current.filter((message) => message.id !== replaceId)
@@ -145,7 +147,10 @@ export function ChatView() {
         memory_enabled: true,
         verification_enabled: true,
       });
-      if (response.status === "failed") throw new Error("workflow_failed");
+      if (response.status === "failed") {
+        setErrorDetail(response.error ?? response.answer);
+        throw new Error("workflow_failed");
+      }
       setConversationId(response.conversation_id);
       setSseTaskId(response.task_id);
       setMessages((current) => [
@@ -154,7 +159,15 @@ export function ChatView() {
       ]);
       // Refresh sidebar
       refreshConversations();
-    } catch {
+    } catch (err) {
+      if (!errorDetail) {
+        // Network or unexpected error
+        setErrorDetail(
+          err instanceof Error && err.message !== "workflow_failed"
+            ? `Network error: ${err.message}`
+            : "Could not reach the AION backend. Please check that the server is running."
+        );
+      }
       setFailedPrompt(value);
     } finally {
       setSending(false);
@@ -169,6 +182,7 @@ export function ChatView() {
     setActiveChat(null);
     setMessages([]);
     setFailedPrompt(null);
+    setErrorDetail(null);
     setConversationId(undefined);
     setSseTaskId(null);
   }
@@ -318,6 +332,7 @@ export function ChatView() {
                   <ChatErrorState
                     onRetry={() => void sendPrompt(failedPrompt)}
                     onQuick={retryQuick}
+                    errorDetail={errorDetail}
                   />
                 )}
               </div>

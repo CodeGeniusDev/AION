@@ -1,5 +1,6 @@
 import type {
   AgentsResponse,
+  AlertsResponse,
   AppSettings,
   ChatRequest,
   ChatResponse,
@@ -162,4 +163,29 @@ export function saveToMemory(content: string, taskId?: string): Promise<{ saved:
 /** URL for the SSE event stream for a given task. */
 export function getEventsUrl(taskId: string): string {
   return `${API_URL}/api/events/${taskId}`;
+}
+
+// --- Alerts / Notifications ---
+
+export function getAlerts(params?: { unread_only?: boolean; limit?: number }): Promise<AlertsResponse> {
+  const search = new URLSearchParams();
+  if (params?.unread_only) search.set("unread_only", "true");
+  if (params?.limit) search.set("limit", String(params.limit));
+  const qs = search.toString();
+  return request<AlertsResponse>(`/api/alerts${qs ? `?${qs}` : ""}`);
+}
+
+export function markAlertsRead(alertIds: string[]): Promise<{ updated: number }> {
+  return request<{ updated: number }>("/api/alerts/mark-read", {
+    method: "POST",
+    body: JSON.stringify({ alert_ids: alertIds }),
+  });
+}
+
+export function markAllAlertsRead(): Promise<{ updated: number }> {
+  return request<{ updated: number }>("/api/alerts/mark-all-read", { method: "POST" });
+}
+
+export function deleteAlert(alertId: string): Promise<{ deleted: boolean }> {
+  return request<{ deleted: boolean }>(`/api/alerts/${alertId}`, { method: "DELETE" });
 }

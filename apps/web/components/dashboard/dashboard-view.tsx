@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { MessageSquarePlus } from "lucide-react";
 import { getDashboard, getHealth } from "@/services/api";
 import type { DashboardData, HealthData, TaskStatus } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import { cn } from "@/utils/cn";
 type Filter = "all" | TaskStatus;
 
 export function DashboardView() {
+  const router = useRouter();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -62,8 +64,8 @@ export function DashboardView() {
         title="Hello, Abdullah"
         description="Manage your Artificial Intelligence Operating Nervous System."
         action={
-          <Button>
-            <Plus className="mr-2 size-4" />
+          <Button onClick={() => router.push("/chat")}>
+            <MessageSquarePlus className="mr-2 size-4" />
             New Task
           </Button>
         }
@@ -164,7 +166,7 @@ export function DashboardView() {
             </div>
             <div className="min-w-0 space-y-5">
               <SystemHealthCard value={data.system_health} health={health} />
-              <AionStatusBanner />
+              <AionStatusBanner connectedAgents={data.active_agents} />
               <section className="rounded-[24px] border bg-white p-5">
                 <h2 className="text-lg font-semibold tracking-[-0.02em]">
                   Agent Activity

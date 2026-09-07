@@ -73,12 +73,17 @@ class ConversationStore:
     def save_user_message(self, conversation_id: str, content: str, *, title: str | None = None) -> StoredMessage:
         """Save a user message, creating the conversation if needed."""
         now = datetime.now(timezone.utc)
+        # Generate a clean title from the first message
+        if not title:
+            title = content.strip()[:60]
+            if len(content.strip()) > 60:
+                title += "..."
         with self._cursor() as cursor:
             # Upsert conversation
             cursor.execute(
                 "INSERT INTO conversations (conversation_id, title, created_at) VALUES (?, ?, ?) "
                 "ON CONFLICT(conversation_id) DO NOTHING",
-                (conversation_id, title or content[:60], now.isoformat()),
+                (conversation_id, title, now.isoformat()),
             )
             msg = StoredMessage(conversation_id=conversation_id, role="user", content=content, created_at=now)
             cursor.execute(

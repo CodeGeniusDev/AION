@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowUpRight, FileText, FlaskConical, Lightbulb, Plus } from "lucide-react";
+import { ArrowUpRight, FileText, FlaskConical, Lightbulb, Lock } from "lucide-react";
 import { getResearch } from "@/services/api";
 import type { ResearchNote } from "@/types";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
+import { Tooltip } from "@/components/ui/tooltip";
 
 const tones = ["bg-soft-blue", "bg-soft-green", "bg-soft-peach"];
 
@@ -40,7 +41,19 @@ export function ResearchView() {
 
   return (
     <>
-      <PageHeader eyebrow="Lab notebook" title="Research" description="Keep architecture notes, experiments, and promising ideas close to the system." action={<Button><Plus className="mr-2 size-4" />New Note</Button>} />
+      <PageHeader
+        eyebrow="Lab notebook"
+        title="Research"
+        description="Keep architecture notes, experiments, and promising ideas close to the system."
+        action={
+          <Tooltip content="Lab notebook creation coming soon">
+            <Button disabled>
+              <Lock className="mr-2 size-3.5" />
+              New Note
+            </Button>
+          </Tooltip>
+        }
+      />
       <div className="p-4 sm:p-6 lg:p-7">
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1.45fr)_minmax(280px,.55fr)]">
           <section className="rounded-[24px] border bg-white p-5 sm:p-6">
@@ -78,9 +91,16 @@ export function ResearchView() {
                       <h3 className="truncate text-sm font-semibold">{note.title}</h3>
                       <p className="mt-1 text-[10px] text-muted-text">{note.type} · {note.date}</p>
                     </div>
-                    <button type="button" className="ml-auto grid size-9 shrink-0 place-items-center rounded-full border" aria-label={`Open ${note.title}`}>
-                      <ArrowUpRight className="size-4" />
-                    </button>
+                    <Tooltip content="Note viewer coming soon">
+                      <button
+                        type="button"
+                        disabled
+                        className="ml-auto grid size-9 shrink-0 place-items-center rounded-full border border-[#d8dce4] bg-[#f0f2f5] text-[#a0a8b4] cursor-not-allowed"
+                        aria-label={`Open ${note.title} (coming soon)`}
+                      >
+                        <ArrowUpRight className="size-4" />
+                      </button>
+                    </Tooltip>
                   </article>
                 ))}
               </div>
@@ -90,7 +110,19 @@ export function ResearchView() {
               </div>
             )}
           </section>
-          <EmptyState icon={Lightbulb} title="Experiment queue" description="Promising research questions can be staged here before an agent workflow begins." action={<Button variant="outline" size="sm">Add an idea</Button>} />
+          <EmptyState
+            icon={Lightbulb}
+            title="Experiment queue"
+            description="Promising research questions can be staged here before an agent workflow begins."
+            action={
+              <Tooltip content="Experiment queue coming soon">
+                <Button variant="outline" size="sm" disabled>
+                  <Lock className="mr-2 size-3.5" />
+                  Add an idea
+                </Button>
+              </Tooltip>
+            }
+          />
         </div>
       </div>
     </>

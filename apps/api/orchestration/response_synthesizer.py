@@ -15,7 +15,13 @@ class ResponseSynthesizer:
             # Agent outputs may be live-generated even when this synthesis call
             # failed, so don't label the response "Development mode" here.
             return f"AION coordinated the requested work. {outputs[-1]}"
-        return f"Development mode: AION received your request: {message}"
+        # No outputs at all — try a direct answer instead of the useless
+        # "Development mode: AION received your request" placeholder.
+        direct = await model_service.generate(
+            "You are AION, a helpful AI assistant. Answer the user's question directly, clearly, and concisely.",
+            message,
+        )
+        return direct or f"I received your request but the AI model is currently unavailable. Please try again shortly."
 
     async def revise(self, message: str, draft: str, model_service: GeminiService) -> str:
         generated = await model_service.generate(
@@ -23,4 +29,3 @@ class ResponseSynthesizer:
             f"Request: {message}\nDraft: {draft}",
         )
         return generated or draft.replace("[needs-revision]", "").strip()
-

@@ -55,7 +55,9 @@ def test_agent_failure_returns_safe_aion_error() -> None:
     response = run_chat(ChatRequest(message="Plan this", mode="manual", selected_agents=["planner"]), runner)
     assert response.author == "AION"
     assert response.status == "failed"
-    assert response.error == "AION could not complete this task."
+    # Error message should be informative, not generic
+    assert response.error is not None
+    assert "simulated" not in (response.error or "")
     assert response.used_agents[0].status == "failed"
     assert "simulated" not in response.answer
 

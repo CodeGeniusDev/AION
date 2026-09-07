@@ -1,3 +1,4 @@
+import asyncio
 import contextvars
 import logging
 from typing import Any
@@ -20,6 +21,14 @@ live_response_generated: contextvars.ContextVar[bool] = contextvars.ContextVar(
 _MAX_TOOL_ROUNDS = 3
 _HTTP_TIMEOUT = 30.0
 
+# Retry configuration: transient errors (429, 503, 500) are retried up to
+# _MAX_RETRIES times with exponential backoff. This significantly reduces
+# the "sometimes doesn't answer" problem caused by Gemini API rate limits
+# or brief outages.
+_MAX_RETRIES = 2
+_RETRY_BASE_DELAY = 0.5  # seconds
+_RETRYABLE_STATUS_CODES = {429, 500, 502, 503}
+
 
 class FunctionCall:
     """Parsed function call from a Gemini response."""
@@ -27,6 +36,37 @@ class FunctionCall:
     def __init__(self, name: str, args: dict[str, Any]) -> None:
         self.name = name
         self.args = args
+
+
+async def _post_with_retry(url: str, api_key: str, payload: dict[str, Any]) -> dict[str, Any] | None:
+    """POST to Gemini API with retry for transient errors.
+
+    Returns the parsed JSON response, or None if all retries failed.
+    """
+    for attempt in range(_MAX_RETRIES + 1):
+        try:
+            async with httpx.AsyncClient(timeout=_HTTP_TIMEOUT) as client:
+                response = await client.post(url, params={"key": api_key}, json=payload)
+                if response.status_code in _RETRYABLE_STATUS_CODES and attempt < _MAX_RETRIES:
+                    delay = _RETRY_BASE_DELAY * (2 ** attempt)
+                    logger.info("gemini_retry attempt=%d status=%d delay=%.1fs", attempt, response.status_code, delay)
+                    await asyncio.sleep(delay)
+                    continue
+                response.raise_for_status()
+            return response.json()
+        except httpx.HTTPError as exc:
+            if attempt < _MAX_RETRIES:
+                delay = _RETRY_BASE_DELAY * (2 ** attempt)
+                logger.info("gemini_retry attempt=%d error=%s delay=%.1fs", attempt, exc, delay)
+                await asyncio.sleep(delay)
+                continue
+            logger.warning("gemini_http_error model_status=%s detail=%s",
+                           getattr(exc, "response", None) and exc.response.status_code, exc)
+            return None
+        except (KeyError, IndexError, TypeError) as exc:
+            logger.warning("gemini_parse_error detail=%s", exc)
+            return None
+    return None
 
 
 class GeminiService:
@@ -50,17 +90,13 @@ class GeminiService:
             "system_instruction": {"parts": [{"text": role_instruction}]},
             "contents": [{"role": "user", "parts": [{"text": prompt}]}],
         }
+        data = await _post_with_retry(url, self.api_key, payload)
+        if data is None:
+            return None
         try:
-            async with httpx.AsyncClient(timeout=_HTTP_TIMEOUT) as client:
-                response = await client.post(url, params={"key": self.api_key}, json=payload)
-                response.raise_for_status()
-            data = response.json()
             result = data["candidates"][0]["content"]["parts"][0]["text"].strip()
             live_response_generated.set(True)
             return result
-        except httpx.HTTPError as exc:
-            logger.warning("gemini_http_error model=%s status=%s detail=%s", self.model, getattr(exc, "response", None) and exc.response.status_code, exc)
-            return None
         except (KeyError, IndexError, TypeError) as exc:
             logger.warning("gemini_parse_error model=%s detail=%s", self.model, exc)
             return None
@@ -99,16 +135,8 @@ class GeminiService:
                 "tools": [{"function_declarations": tool_declarations}],
             }
 
-            try:
-                async with httpx.AsyncClient(timeout=_HTTP_TIMEOUT) as client:
-                    response = await client.post(url, params={"key": self.api_key}, json=payload)
-                    response.raise_for_status()
-                data = response.json()
-            except httpx.HTTPError as exc:
-                logger.warning("gemini_tools_http_error round=%d status=%s", round_idx, getattr(exc, "response", None) and exc.response.status_code)
-                return None
-            except (KeyError, IndexError, TypeError) as exc:
-                logger.warning("gemini_tools_parse_error round=%d detail=%s", round_idx, exc)
+            data = await _post_with_retry(url, self.api_key, payload)
+            if data is None:
                 return None
 
             parts = data.get("candidates", [{}])[0].get("content", {}).get("parts", [])
@@ -158,14 +186,13 @@ class GeminiService:
             "system_instruction": {"parts": [{"text": role_instruction}]},
             "contents": contents,
         }
+        data = await _post_with_retry(url, self.api_key, final_payload)
+        if data is None:
+            return None
         try:
-            async with httpx.AsyncClient(timeout=_HTTP_TIMEOUT) as client:
-                response = await client.post(url, params={"key": self.api_key}, json=final_payload)
-                response.raise_for_status()
-            data = response.json()
             result = data["candidates"][0]["content"]["parts"][0]["text"].strip()
             live_response_generated.set(True)
             return result
-        except (httpx.HTTPError, KeyError, IndexError, TypeError) as exc:
+        except (KeyError, IndexError, TypeError) as exc:
             logger.warning("gemini_tools_final_error detail=%s", exc)
             return None

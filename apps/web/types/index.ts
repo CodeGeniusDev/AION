@@ -205,3 +205,24 @@ export interface AppSettings {
   notify_system_health: boolean;
   notify_weekly_summary: boolean;
 }
+
+// --- Alerts / Notifications ---
+
+export type AlertCategory = "task" | "agent" | "system" | "memory";
+export type AlertTone = "info" | "success" | "warning" | "error";
+
+export interface AlertItem {
+  id: string;
+  title: string;
+  description: string;
+  time: string;
+  category: AlertCategory;
+  unread: boolean;
+  tone: AlertTone;
+}
+
+export interface AlertsResponse {
+  items: AlertItem[];
+  total: number;
+  unread_count: number;
+}

@@ -5,9 +5,10 @@ import {
   ArrowUpRight,
   BookOpenCheck,
   Brain,
+  ChevronUp,
   Compass,
   Database,
-  Plus,
+  Lock,
 } from "lucide-react";
 import { getAgents } from "@/services/api";
 import type { AgentCardData } from "@/types";
@@ -17,6 +18,7 @@ import { ProgressIndicator } from "@/components/ui/progress-indicator";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { PageHeader } from "@/components/layout/page-header";
+import { Tooltip } from "@/components/ui/tooltip";
 
 const icons = [Compass, BookOpenCheck, Brain, Database];
 const tones = ["bg-soft-peach", "bg-soft-blue", "bg-soft-grey", "bg-soft-green"];
@@ -26,6 +28,7 @@ export function AgentsView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
+  const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -55,10 +58,12 @@ export function AgentsView() {
         title="Agents"
         description="Meet the specialists that plan, investigate, challenge, and remember for AION."
         action={
-          <Button>
-            <Plus className="mr-2 size-4" />
-            New Agent
-          </Button>
+          <Tooltip content="Custom agent creation coming soon">
+            <Button disabled>
+              <Lock className="mr-2 size-3.5" />
+              New Agent
+            </Button>
+          </Tooltip>
         }
       />
       <div className="p-4 sm:p-6 lg:p-7">
@@ -80,6 +85,7 @@ export function AgentsView() {
           <div className="grid gap-5 sm:grid-cols-2">
             {agents.map((agent, index) => {
               const Icon = icons[index % icons.length];
+              const isExpanded = expandedAgent === (agent.id ?? agent.name);
               return (
                 <article key={agent.id ?? agent.name} className="rounded-[24px] border bg-white p-5 sm:p-6">
                   <div className="flex items-start gap-4">
@@ -107,8 +113,44 @@ export function AgentsView() {
                   <div className="mt-5">
                     <ProgressIndicator value={agent.confidence} label="Confidence" />
                   </div>
-                  <button type="button" className="mt-5 flex h-10 w-full items-center justify-center gap-2 rounded-full bg-navy text-xs font-medium text-white hover:bg-[#25334b]">
-                    View agent <ArrowUpRight className="size-4" />
+
+                  {isExpanded && (
+                    <div className="mt-4 rounded-[18px] border border-[#e8ecf2] bg-[#fafbfd] p-4">
+                      <h3 className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-text">Agent Details</h3>
+                      <dl className="mt-3 space-y-2.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <dt className="text-muted-text">Agent ID</dt>
+                          <dd className="font-mono font-medium text-navy">{agent.id ?? "—"}</dd>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <dt className="text-muted-text">Status</dt>
+                          <dd><StatusBadge status={agent.status} /></dd>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <dt className="text-muted-text">Specialty</dt>
+                          <dd className="font-medium">{agent.specialty}</dd>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <dt className="text-muted-text">Confidence</dt>
+                          <dd className="font-medium">{agent.confidence}%</dd>
+                        </div>
+                      </dl>
+                      <p className="mt-3 text-[11px] leading-5 text-muted-text">
+                        {agent.description}
+                      </p>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setExpandedAgent(isExpanded ? null : (agent.id ?? agent.name))}
+                    className="mt-5 flex h-10 w-full items-center justify-center gap-2 rounded-full bg-navy text-xs font-medium text-white hover:bg-[#25334b] transition-colors"
+                  >
+                    {isExpanded ? (
+                      <>Hide details <ChevronUp className="size-4" /></>
+                    ) : (
+                      <>View agent <ArrowUpRight className="size-4" /></>
+                    )}
                   </button>
                 </article>
               );

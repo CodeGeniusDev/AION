@@ -25,7 +25,7 @@ from models.knowledge import ResearchResult
 from services.gemini import GeminiService, live_response_generated
 from tools.executor import ToolExecutor
 from tools.knowledge_providers import build_knowledge_registry
-from tools.schema import tools_to_declarations
+from tools.schema import tools_to_declarations, message_needs_tools
 
 logger = get_logger("orchestration.workflow_runner")
 
@@ -304,12 +304,13 @@ class WorkflowRunner:
         revision_count = 0
 
         # --- Tool invocation via Gemini function calling ----------------
-        # Before running agents, give the LLM a chance to invoke tools
-        # (calculator, text analysis, datetime). If Gemini decides to use
-        # tools, execute them and add results as context for agents.
+        # Only invoke tools when the message heuristically matches a
+        # tool-capable intent (math, time, text analysis). This avoids an
+        # expensive Gemini function-calling round-trip for the vast majority
+        # of messages that don't need computation.
         tool_results: list[str] = []
         tool_identities = self.tool_executor.registry.list_identities()
-        if tool_identities and self.model_service.is_configured():
+        if tool_identities and self.model_service.is_configured() and message_needs_tools(request.message):
             declarations = tools_to_declarations(tool_identities)
 
             async def _execute_tool_fn(name: str, args: dict) -> str:
@@ -430,6 +431,30 @@ class WorkflowRunner:
             except Exception as exc:
                 logger.warning("research_pipeline_failed task_id=%s error=%s", task_id, exc)
 
+        # Last-resort recovery: if all agents failed OR draft is still the
+        # generic development-mode fallback, try a direct Gemini call to
+        # produce a useful answer instead of the unhelpful placeholder.
+        error_detail: str | None = None
+        if status == "failed" or (development_mode and not all_outputs):
+            direct_answer = await self.model_service.generate(
+                "You are AION, a multi-agent AI assistant. Answer the user's question directly and helpfully.",
+                request.message,
+            )
+            if direct_answer:
+                draft = direct_answer
+                status = "completed"
+                development_mode = not live_response_generated.get()
+                confidence = self.calculate_confidence(
+                    total_agents=0, completed_agents=0, critic_approved=False,
+                    verification_enabled=request.verification_enabled,
+                    source_count=0, error_count=0, development_mode=development_mode,
+                )
+            else:
+                error_detail = (
+                    "The AI model is currently unavailable. Please check your GEMINI_API_KEY "
+                    "configuration and try again in a moment."
+                )
+
         # Publish terminal event so SSE subscribers know the task is done
         bus.publish(CognitiveMessage(
             task_id=task_id, source_agent="aion", target_agent=None,
@@ -442,7 +467,7 @@ class WorkflowRunner:
         return ChatResponse(
             task_id=task_id,
             conversation_id=conversation_id,
-            answer=draft if status == "completed" else "AION could not complete this task.",
+            answer=draft if status == "completed" else (error_detail or "AION could not complete this task."),
             mode=request.mode,
             status=status,
             used_agents=used_agents,
@@ -450,7 +475,7 @@ class WorkflowRunner:
             processing_time_ms=max(1, round((perf_counter() - started) * 1000)),
             selection_summary=decision.reason,
             sources=sources,
-            error="AION could not complete this task." if status == "failed" else None,
+            error=error_detail if status == "failed" else None,
             development_mode=development_mode,
             revision_count=revision_count,
         )

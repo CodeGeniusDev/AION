@@ -36,7 +36,7 @@ def test_dashboard_reflects_real_backend_state() -> None:
     assert body["active_agents"] == 4  # the four real registered agents are always available in tests
     assert body["total_tasks"] >= 0
     assert body["saved_memories"] >= 0
-    assert body["system_health"] == 100
+    assert body["system_health"] >= 0  # real score computed from Gemini/Memory/Agents checks
     assert len(body["agent_activity"]) == 4
     assert isinstance(body["recent_tasks"], list)
 

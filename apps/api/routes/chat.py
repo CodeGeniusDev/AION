@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from auth.dependency import get_current_principal, require_role, resolve_tenant_id
 from config import settings
+from memory.alert_store import AlertStore
 from memory.conversation_store import ConversationStore, ConversationSummary
 from models.auth import AuthenticatedPrincipal
 from models.chat import ChatRequest, ChatResponse
@@ -12,6 +13,19 @@ from orchestration.workflow_runner import WorkflowRunner
 router = APIRouter(tags=["chat"])
 workflow_runner = WorkflowRunner()
 conversation_store = ConversationStore()
+
+# Alert store shares the same db_path as memory store for consistent persistence.
+# When AION_MEMORY_DB_PATH is set (e.g. Docker volume), alerts survive restarts.
+alert_store = AlertStore(db_path=settings.memory_db_path or ":memory:")
+
+# Seed a welcome alert so the notifications page is not empty on first load.
+alert_store.create(
+    title="Welcome to AION",
+    description="AION is ready. Send a message in Chat to get started — task completions and system events will appear here.",
+    category="system",
+    tone="info",
+)
+
 logger = get_logger("routes.chat")
 
 # Rate limiting on /api/chat only — the only compute-heavy endpoint.
@@ -63,6 +77,16 @@ async def chat(
     # Save assistant response
     if response.status == "completed":
         conversation_store.save_assistant_message(convo_id, response.answer, task_id=response.task_id)
+
+    # Auto-generate a notification alert for this task
+    try:
+        alert_store.create_task_alert(
+            task_id=response.task_id,
+            message_preview=payload.message,
+            status=response.status,
+        )
+    except Exception:
+        logger.warning("alert_creation_failed task_id=%s", response.task_id, exc_info=True)
 
     logger.info("chat_request_completed task_id=%s status=%s tenant_id=%s", response.task_id, response.status, tenant_id)
     return response
