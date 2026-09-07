@@ -337,12 +337,18 @@ class WorkflowRunner:
                     status="completed", summary="Invoked tools via LLM function calling",
                 ))
 
-        # --- Parallel agent execution via asyncio.gather ---------------
-        # Agents are independent of each other (they all receive the same
-        # memories + tool_results context). Running them in parallel reduces
-        # total latency from sum(agent_times) to max(agent_times).
-        async def _run_agent(agent_id: str) -> tuple[str, str | None, str, float]:
+        # --- Staggered parallel agent execution via asyncio.gather ---
+        # Agents are independent (same memories + tool_results context).
+        # Running in parallel reduces latency from sum() to max(), but
+        # starting all agents at the exact same instant fires N Gemini
+        # API calls simultaneously — which triggers 429 rate limits on
+        # free-tier keys (~15 RPM). A 1s stagger between agent starts
+        # spreads the API calls over time while keeping most of the
+        # parallel latency benefit.
+        async def _run_agent(agent_id: str, stagger_delay: float) -> tuple[str, str | None, str, float]:
             """Run a single agent, returning (agent_id, output_or_None, summary, latency_ms)."""
+            if stagger_delay > 0:
+                await asyncio.sleep(stagger_delay)
             agent = self.agents[agent_id]
             step_started = perf_counter()
             try:
@@ -361,8 +367,14 @@ class WorkflowRunner:
         for agent_id in decision.execution_order:
             bus.publish(CognitiveMessage(task_id=task_id, source_agent="aion", target_agent=agent_id, intent="execute", content=request.message, status="processing"))
 
-        # Run all agents in parallel
-        results = await asyncio.gather(*[_run_agent(aid) for aid in decision.execution_order])
+        # Stagger agent starts by 1s each to avoid burst rate-limiting.
+        # Skip stagger when model calls are disabled (test mode) since
+        # agents return instantly and the delay only slows tests.
+        _STAGGER_DELAY = 1.0 if settings.model_calls_enabled else 0.0
+        results = await asyncio.gather(*[
+            _run_agent(aid, i * _STAGGER_DELAY)
+            for i, aid in enumerate(decision.execution_order)
+        ])
 
         for agent_id, output, summary, latency in results:
             agent = self.agents[agent_id]

@@ -22,11 +22,11 @@ _MAX_TOOL_ROUNDS = 3
 _HTTP_TIMEOUT = 30.0
 
 # Retry configuration: transient errors (429, 503, 500) are retried up to
-# _MAX_RETRIES times with exponential backoff. This significantly reduces
-# the "sometimes doesn't answer" problem caused by Gemini API rate limits
-# or brief outages.
-_MAX_RETRIES = 2
-_RETRY_BASE_DELAY = 0.5  # seconds
+# _MAX_RETRIES times with exponential backoff. 429 (rate limit) gets a
+# longer base delay since Gemini's rate-limit window is typically 60s.
+_MAX_RETRIES = 3
+_RETRY_BASE_DELAY = 0.5  # seconds (doubles each attempt: 0.5, 1, 2)
+_429_BASE_DELAY = 2.0  # seconds for rate-limit (doubles: 2, 4, 8)
 _RETRYABLE_STATUS_CODES = {429, 500, 502, 503}
 
 
@@ -42,26 +42,38 @@ async def _post_with_retry(url: str, api_key: str, payload: dict[str, Any]) -> d
     """POST to Gemini API with retry for transient errors.
 
     Returns the parsed JSON response, or None if all retries failed.
+    429 (rate limit) uses a longer base delay to respect the rate window.
     """
     for attempt in range(_MAX_RETRIES + 1):
         try:
             async with httpx.AsyncClient(timeout=_HTTP_TIMEOUT) as client:
                 response = await client.post(url, params={"key": api_key}, json=payload)
                 if response.status_code in _RETRYABLE_STATUS_CODES and attempt < _MAX_RETRIES:
-                    delay = _RETRY_BASE_DELAY * (2 ** attempt)
+                    # 429 gets longer delays; also honour Retry-After if present
+                    if response.status_code == 429:
+                        retry_after = response.headers.get("retry-after")
+                        if retry_after and retry_after.isdigit():
+                            delay = float(retry_after)
+                        else:
+                            delay = _429_BASE_DELAY * (2 ** attempt)
+                    else:
+                        delay = _RETRY_BASE_DELAY * (2 ** attempt)
                     logger.info("gemini_retry attempt=%d status=%d delay=%.1fs", attempt, response.status_code, delay)
                     await asyncio.sleep(delay)
                     continue
                 response.raise_for_status()
             return response.json()
         except httpx.HTTPError as exc:
+            status = getattr(exc, "response", None) and exc.response.status_code
             if attempt < _MAX_RETRIES:
-                delay = _RETRY_BASE_DELAY * (2 ** attempt)
+                if status == 429:
+                    delay = _429_BASE_DELAY * (2 ** attempt)
+                else:
+                    delay = _RETRY_BASE_DELAY * (2 ** attempt)
                 logger.info("gemini_retry attempt=%d error=%s delay=%.1fs", attempt, exc, delay)
                 await asyncio.sleep(delay)
                 continue
-            logger.warning("gemini_http_error model_status=%s detail=%s",
-                           getattr(exc, "response", None) and exc.response.status_code, exc)
+            logger.warning("gemini_http_error model_status=%s detail=%s", status, exc)
             return None
         except (KeyError, IndexError, TypeError) as exc:
             logger.warning("gemini_parse_error detail=%s", exc)
