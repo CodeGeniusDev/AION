@@ -18,6 +18,7 @@ def test_health() -> None:
     assert body["status"] in ("healthy", "degraded", "unhealthy")
     assert body["service"] == "AION API"
     assert "version" in body
+    assert "model_name" in body
     assert body["gemini"]["status"] in ("ok", "degraded", "error")
     assert body["memory"]["status"] in ("ok", "degraded", "error")
     assert body["agents"]["status"] in ("ok", "degraded", "error")

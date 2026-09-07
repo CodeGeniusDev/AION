@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -19,6 +20,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
+import { getHealth } from "@/services/api";
 import { cn } from "@/utils/cn";
 
 interface NavItem {
@@ -67,6 +69,13 @@ export function Sidebar({
   onMobileClose,
 }: SidebarProps) {
   const pathname = usePathname();
+  const [modelName, setModelName] = useState("");
+
+  useEffect(() => {
+    getHealth()
+      .then((h) => setModelName(h.model_name || ""))
+      .catch(() => setModelName(""));
+  }, []);
 
   const renderContent = (isCollapsed: boolean) => (
     <>
@@ -131,7 +140,7 @@ export function Sidebar({
       >
         <Link
           data-sidebar-item
-          href="/tasks"
+          href="/chat"
           onClick={onMobileClose}
           className={cn(
             "mb-6 flex h-12 items-center rounded-full bg-primary text-sm font-medium text-white shadow-[0_7px_18px_rgba(23,105,243,0.2)] transition-colors hover:bg-[#0f5ce0]",
@@ -227,7 +236,7 @@ export function Sidebar({
           </progress>
           <div className="mt-3 flex items-center justify-between text-[10px]">
             <span className="text-muted-text">Current model</span>
-            <span className="font-medium">Gemini 2.5</span>
+            <span className="font-medium">{modelName || "gemini-3.6-flash"}</span>
           </div>
           <Link
             href="/settings"

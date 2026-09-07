@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Body, HTTPException, Query
 
+from models.cognitive_memory import MemoryRecord
 from models.memory import MemoryRecordOut, MemoryRecordsListResponse, MemoryResponse
 from routes.chat import workflow_runner  # the same live singleton /api/chat writes to
 from services.memory_service import get_memory
@@ -64,3 +65,27 @@ def _record_to_out(record) -> MemoryRecordOut:
         tags=record.tags,
         created_at=record.created_at.isoformat(),
     )
+
+
+@router.post("/memories/save-content")
+async def save_to_memory(
+    content: str = Body(min_length=1, max_length=8000, embed=True),
+    task_id: str = Body(default="manual-save", embed=True),
+) -> dict:
+    """Save arbitrary content (e.g. a chat response) as a memory record.
+
+    Wired to the 'Save to Memory' button in the chat UI. Writes a semantic
+    record so it appears in memory search and browse results.
+    """
+    store = workflow_runner.memory_store
+    record = MemoryRecord(
+        type="semantic",
+        content=content,
+        task_id=task_id,
+        source_agent="user",
+        verification_state="unverified",
+        tags=["user-saved"],
+        provenance="user-save-to-memory",
+    )
+    store.write(record)
+    return {"saved": True, "memory_id": record.memory_id}

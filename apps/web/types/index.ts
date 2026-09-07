@@ -139,6 +139,7 @@ export interface HealthData {
   status: "healthy" | "degraded" | "unhealthy";
   service: string;
   version: string;
+  model_name: string;
   gemini: HealthComponent;
   memory: HealthComponent;
   agents: HealthComponent;
@@ -178,4 +179,29 @@ export interface MemoryRecordOut {
 export interface MemoryRecordsResponse {
   items: MemoryRecordOut[];
   total: number;
+}
+
+// --- Task Detail ---
+
+export interface TaskDetail {
+  id: string;
+  title: string;
+  agent: string;
+  status: TaskStatus;
+  confidence: number;
+  created: string;
+}
+
+// --- Settings ---
+
+export interface AppSettings {
+  workspace_name: string;
+  default_view: string;
+  preferred_model: string;
+  theme: "light" | "system" | "dim";
+  memory_enabled: boolean;
+  verification_enabled: boolean;
+  notify_task_completions: boolean;
+  notify_system_health: boolean;
+  notify_weekly_summary: boolean;
 }

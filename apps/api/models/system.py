@@ -16,6 +16,7 @@ class HealthResponse(BaseModel):
     status: Literal["healthy", "degraded", "unhealthy"]
     service: str
     version: str
+    model_name: str = ""
     gemini: HealthComponent
     memory: HealthComponent
     agents: HealthComponent

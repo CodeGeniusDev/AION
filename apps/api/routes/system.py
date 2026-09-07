@@ -49,6 +49,7 @@ async def health() -> HealthResponse:
         status=overall,
         service="AION API",
         version=settings.app_version,
+        model_name=workflow_runner.model_service.model,
         gemini=gemini,
         memory=memory,
         agents=agents,

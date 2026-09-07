@@ -13,8 +13,10 @@ from routes.agents import router as agents_router
 from routes.chat import router as chat_router
 from routes.dashboard import router as dashboard_router
 from routes.events import router as events_router
+from routes.feedback import router as feedback_router
 from routes.memory import router as memory_router
 from routes.research import router as research_router
+from routes.settings import router as settings_router
 from routes.system import router as system_router
 from routes.tasks import router as tasks_router
 from routes.workflows import router as workflows_router
@@ -69,9 +71,11 @@ app.include_router(system_router)
 app.include_router(dashboard_router, prefix="/api")
 app.include_router(chat_router, prefix="/api")
 app.include_router(events_router, prefix="/api")
+app.include_router(feedback_router, prefix="/api")
 app.include_router(agents_router, prefix="/api")
 app.include_router(tasks_router, prefix="/api")
 app.include_router(memory_router, prefix="/api")
+app.include_router(settings_router, prefix="/api")
 app.include_router(workflows_router, prefix="/api")
 app.include_router(research_router, prefix="/api")
 

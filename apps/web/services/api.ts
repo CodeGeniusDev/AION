@@ -1,5 +1,6 @@
 import type {
   AgentsResponse,
+  AppSettings,
   ChatRequest,
   ChatResponse,
   ConversationSummary,
@@ -9,6 +10,7 @@ import type {
   MemoryResponse,
   ResearchResponse,
   StoredMessage,
+  TaskDetail,
   TasksResponse,
   WorkflowsResponse,
 } from "@/types";
@@ -116,6 +118,43 @@ export function searchMemoryRecords(query: string, params?: { memory_type?: stri
 
 export function deleteMemoryRecord(memoryId: string): Promise<{ deleted: boolean }> {
   return request<{ deleted: boolean }>(`/api/memories/records/${memoryId}`, { method: "DELETE" });
+}
+
+// --- Task Detail ---
+
+export function getTask(taskId: string): Promise<TaskDetail> {
+  return request<TaskDetail>(`/api/tasks/${taskId}`);
+}
+
+// --- Settings ---
+
+export function getSettings(): Promise<AppSettings> {
+  return request<AppSettings>("/api/settings");
+}
+
+export function updateSettings(settings: AppSettings): Promise<AppSettings> {
+  return request<AppSettings>("/api/settings", {
+    method: "PUT",
+    body: JSON.stringify(settings),
+  });
+}
+
+// --- Feedback ---
+
+export function submitFeedback(taskId: string, sentiment: "up" | "down", comment?: string): Promise<{ accepted: boolean }> {
+  return request<{ accepted: boolean }>("/api/feedback", {
+    method: "POST",
+    body: JSON.stringify({ task_id: taskId, sentiment, comment: comment ?? "" }),
+  });
+}
+
+// --- Save to Memory ---
+
+export function saveToMemory(content: string, taskId?: string): Promise<{ saved: boolean; memory_id: string }> {
+  return request<{ saved: boolean; memory_id: string }>("/api/memories/save-content", {
+    method: "POST",
+    body: JSON.stringify({ content, task_id: taskId ?? "manual-save" }),
+  });
 }
 
 // --- SSE ---
