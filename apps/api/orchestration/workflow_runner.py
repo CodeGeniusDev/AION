@@ -22,7 +22,7 @@ from orchestration.brain_former import DynamicBrainFormer, brain_to_routing_deci
 from orchestration.research_pipeline import ResearchPipeline
 from orchestration.response_synthesizer import ResponseSynthesizer
 from models.knowledge import ResearchResult
-from services.gemini import GeminiService
+from services.gemini import GeminiService, live_response_generated
 from tools.executor import ToolExecutor
 from tools.knowledge_providers import build_knowledge_registry
 
@@ -239,7 +239,10 @@ class WorkflowRunner:
         self, request: ChatRequest, available_memory: list[str] | None = None, tenant_id: str | None = None,
     ) -> ChatResponse:
         started = perf_counter()
-        self.model_service.generated_live_response = False
+        # Per-request flag (contextvars): concurrent requests each get their
+        # own copy, eliminating the race that existed with the old shared
+        # GeminiService.generated_live_response attribute.
+        live_response_generated.set(False)
         task_id = f"task-{uuid4().hex[:8]}"
         self._track_task(task_id)
         conversation_id = request.conversation_id or f"conversation-{uuid4().hex[:8]}"
@@ -332,7 +335,7 @@ class WorkflowRunner:
                 tenant_id=tenant_id,
             )
         logger.info("task_completed task_id=%s status=%s errors=%s", task_id, status, errors)
-        development_mode = not self.model_service.generated_live_response
+        development_mode = not live_response_generated.get()
         confidence = self.calculate_confidence(
             total_agents=len(decision.selected_agents),
             completed_agents=len(decision.selected_agents) - errors,

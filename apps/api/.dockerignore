@@ -1,0 +1,30 @@
+# Secrets — never bake into image layers
+.env
+.env.*
+!.env.example
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+.coverage
+.mypy_cache/
+
+# Version control
+.git/
+.gitignore
+
+# Editor / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Docs / meta
+README.md
+LICENSE
+CHANGELOG.md

@@ -1,0 +1,27 @@
+# Secrets — never bake into image layers
+.env
+.env.*
+!.env.example
+
+# Build artifacts (rebuilt inside the container)
+node_modules/
+.next/
+out/
+
+# Version control
+.git/
+.gitignore
+
+# TypeScript
+*.tsbuildinfo
+
+# Editor / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Docs / meta
+README.md
+LICENSE
+CHANGELOG.md
