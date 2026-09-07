@@ -249,6 +249,13 @@ class WorkflowRunner:
         memories = available_memory or []
         bus = self.bus
         logger.info("task_started task_id=%s mode=%s tenant_id=%s", task_id, request.mode, tenant_id)
+        # Publish early so SSE subscribers connecting right after POST /api/chat
+        # can discover this task via bus replay.
+        bus.publish(CognitiveMessage(
+            task_id=task_id, source_agent="aion", target_agent=None,
+            intent="task_started", content=f"Task started in {request.mode} mode",
+            context={"mode": request.mode}, status="processing",
+        ))
         if self.enable_memory_persistence:
             retrieved = await asyncio.to_thread(
                 self.memory_store.search, query=request.message, memory_type="semantic", limit=5, tenant_id=tenant_id,
@@ -345,6 +352,33 @@ class WorkflowRunner:
             error_count=errors,
             development_mode=development_mode,
         )
+
+        # Research mode: run the research pipeline and populate sources
+        sources: list[str] = []
+        if request.mode == "research" and status == "completed":
+            try:
+                research_result = await self.research(request.message, task_id=task_id)
+                for source in research_result.all_sources:
+                    label = source.title
+                    if source.url:
+                        label = f"[{source.title}]({source.url})"
+                    sources.append(label)
+                # Append verified evidence to the answer
+                if research_result.evidence:
+                    evidence_text = "\n\n".join(f"- {e.content[:200]}" for e in research_result.evidence[:3])
+                    draft = f"{draft}\n\n**Research evidence:**\n{evidence_text}"
+            except Exception as exc:
+                logger.warning("research_pipeline_failed task_id=%s error=%s", task_id, exc)
+
+        # Publish terminal event so SSE subscribers know the task is done
+        bus.publish(CognitiveMessage(
+            task_id=task_id, source_agent="aion", target_agent=None,
+            intent="task_completed" if status == "completed" else "task_failed",
+            content=f"Task {status} in {max(1, round((perf_counter() - started) * 1000))}ms",
+            context={"status": status, "confidence": confidence},
+            status="completed" if status == "completed" else "failed",
+        ))
+
         return ChatResponse(
             task_id=task_id,
             conversation_id=conversation_id,
@@ -355,7 +389,7 @@ class WorkflowRunner:
             confidence=confidence,
             processing_time_ms=max(1, round((perf_counter() - started) * 1000)),
             selection_summary=decision.reason,
-            sources=[],
+            sources=sources,
             error="AION could not complete this task." if status == "failed" else None,
             development_mode=development_mode,
             revision_count=revision_count,

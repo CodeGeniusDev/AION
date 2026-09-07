@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from auth.dependency import get_current_principal, require_role, resolve_tenant_id
 from config import settings
+from memory.conversation_store import ConversationStore, ConversationSummary
 from models.auth import AuthenticatedPrincipal
 from models.chat import ChatRequest, ChatResponse
 from observability.logging_config import get_logger
@@ -10,6 +11,7 @@ from orchestration.workflow_runner import WorkflowRunner
 
 router = APIRouter(tags=["chat"])
 workflow_runner = WorkflowRunner()
+conversation_store = ConversationStore()
 logger = get_logger("routes.chat")
 
 # Rate limiting on /api/chat only — the only compute-heavy endpoint.
@@ -40,6 +42,60 @@ async def chat(
 
     tenant_id = resolve_tenant_id(principal)
     logger.info("chat_request_received mode=%s tenant_id=%s authenticated=%s", payload.mode, tenant_id, principal is not None)
-    response = await workflow_runner.run(payload, tenant_id=tenant_id)
+
+    # Load conversation history for multi-turn context
+    history_context: list[str] = []
+    if payload.conversation_id:
+        stored = conversation_store.get_messages(payload.conversation_id)
+        for msg in stored[-10:]:  # last 10 messages as context
+            prefix = "User" if msg.role == "user" else "AION"
+            history_context.append(f"{prefix}: {msg.content}")
+
+    # Save user message before running the pipeline
+    convo_id = payload.conversation_id or f"conversation-{__import__('uuid').uuid4().hex[:8]}"
+    conversation_store.save_user_message(convo_id, payload.message)
+
+    response = await workflow_runner.run(payload, available_memory=history_context or None, tenant_id=tenant_id)
+
+    # Override the conversation_id with our persisted one
+    response.conversation_id = convo_id
+
+    # Save assistant response
+    if response.status == "completed":
+        conversation_store.save_assistant_message(convo_id, response.answer, task_id=response.task_id)
+
     logger.info("chat_request_completed task_id=%s status=%s tenant_id=%s", response.task_id, response.status, tenant_id)
     return response
+
+
+@router.get("/conversations", response_model=list[ConversationSummary])
+async def list_conversations(limit: int = 20) -> list[ConversationSummary]:
+    """List recent conversations for the sidebar."""
+    return conversation_store.list_conversations(limit=limit)
+
+
+@router.get("/conversations/{conversation_id}/messages")
+async def get_conversation_messages(conversation_id: str) -> list[dict]:
+    """Load all messages for a conversation."""
+    messages = conversation_store.get_messages(conversation_id)
+    if not messages:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return [
+        {
+            "message_id": m.message_id,
+            "role": m.role,
+            "content": m.content,
+            "task_id": m.task_id,
+            "created_at": m.created_at.isoformat(),
+        }
+        for m in messages
+    ]
+
+
+@router.delete("/conversations/{conversation_id}")
+async def delete_conversation(conversation_id: str) -> dict:
+    """Delete a conversation and all its messages."""
+    deleted = conversation_store.delete_conversation(conversation_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return {"deleted": True, "conversation_id": conversation_id}

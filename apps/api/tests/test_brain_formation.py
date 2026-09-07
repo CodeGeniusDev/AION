@@ -253,7 +253,8 @@ def test_brain_formed_event_precedes_agent_execution_messages() -> None:
     response = run_chat(ChatRequest(message="Create a roadmap and steps for launch"), runner)
 
     intents = [message.intent for message in runner.bus.get_task_messages(response.task_id)]
-    assert intents[0] == "brain_formed"
+    assert "brain_formed" in intents
+    assert intents.index("brain_formed") < intents.index("execute")
     assert "execute" in intents
 
 

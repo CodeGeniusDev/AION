@@ -12,6 +12,7 @@ from observability.logging_config import configure_logging, get_logger
 from routes.agents import router as agents_router
 from routes.chat import router as chat_router
 from routes.dashboard import router as dashboard_router
+from routes.events import router as events_router
 from routes.memory import router as memory_router
 from routes.research import router as research_router
 from routes.system import router as system_router
@@ -67,6 +68,7 @@ async def request_context_middleware(request: Request, call_next):
 app.include_router(system_router)
 app.include_router(dashboard_router, prefix="/api")
 app.include_router(chat_router, prefix="/api")
+app.include_router(events_router, prefix="/api")
 app.include_router(agents_router, prefix="/api")
 app.include_router(tasks_router, prefix="/api")
 app.include_router(memory_router, prefix="/api")

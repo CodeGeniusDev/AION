@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Plus } from "lucide-react";
-import { getDashboard } from "@/services/api";
-import type { DashboardData, TaskStatus } from "@/types";
+import { getDashboard, getHealth } from "@/services/api";
+import type { DashboardData, HealthData, TaskStatus } from "@/types";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
@@ -23,14 +23,16 @@ export function DashboardView() {
   const [error, setError] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [filter, setFilter] = useState<Filter>("all");
+  const [health, setHealth] = useState<HealthData | null>(null);
 
   useEffect(() => {
     let mounted = true;
     setLoading(true);
-    getDashboard()
-      .then((response) => {
+    Promise.all([getDashboard(), getHealth()])
+      .then(([dashboard, healthData]) => {
         if (mounted) {
-          setData(response);
+          setData(dashboard);
+          setHealth(healthData);
           setError(false);
         }
       })
@@ -161,7 +163,7 @@ export function DashboardView() {
               </section>
             </div>
             <div className="min-w-0 space-y-5">
-              <SystemHealthCard value={data.system_health} />
+              <SystemHealthCard value={data.system_health} health={health} />
               <AionStatusBanner />
               <section className="rounded-[24px] border bg-white p-5">
                 <h2 className="text-lg font-semibold tracking-[-0.02em]">

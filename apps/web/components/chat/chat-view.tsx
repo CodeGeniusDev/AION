@@ -1,15 +1,26 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import {
   MessageCircleMore,
   Plus,
   Send,
   Sparkles,
+  Trash2,
   UserRound,
 } from "lucide-react";
-import { sendChatMessage } from "@/services/api";
-import type { AgentId, ChatMessage, ChatMode } from "@/types";
+import {
+  deleteConversation,
+  getConversationMessages,
+  getConversations,
+  sendChatMessage,
+} from "@/services/api";
+import type {
+  AgentId,
+  ChatMessage,
+  ChatMode,
+  ConversationSummary,
+} from "@/types";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
@@ -17,6 +28,7 @@ import { AionMessage } from "./aion-message";
 import { ChatErrorState } from "./chat-error-state";
 import { ModeSelector } from "./mode-selector";
 import { ProcessingState } from "./processing-state";
+import { cn } from "@/utils/cn";
 
 export function ChatView() {
   const [activeChat, setActiveChat] = useState<string | null>(null);
@@ -29,8 +41,72 @@ export function ChatView() {
   const [conversationId, setConversationId] = useState<string | undefined>(
     undefined,
   );
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [sseTaskId, setSseTaskId] = useState<string | null>(null);
 
   const manualInvalid = mode === "manual" && selectedAgents.length === 0;
+
+  // Load conversations for the sidebar
+  const refreshConversations = useCallback(() => {
+    getConversations()
+      .then(setConversations)
+      .catch(() => setConversations([]));
+  }, []);
+
+  useEffect(() => {
+    refreshConversations();
+  }, [refreshConversations]);
+
+  // Load a conversation's messages
+  async function loadConversation(convoId: string) {
+    try {
+      const stored = await getConversationMessages(convoId);
+      const loaded: ChatMessage[] = stored.map((msg, idx) =>
+        msg.role === "user"
+          ? {
+              id: `loaded-user-${idx}`,
+              role: "user" as const,
+              content: msg.content,
+            }
+          : {
+              id: `loaded-aion-${idx}`,
+              role: "assistant" as const,
+              response: {
+                task_id: msg.task_id ?? "",
+                conversation_id: convoId,
+                author: "AION" as const,
+                answer: msg.content,
+                mode: "auto" as const,
+                status: "completed" as const,
+                used_agents: [],
+                confidence: 0,
+                processing_time_ms: 0,
+                selection_summary: "",
+                sources: [],
+                error: null,
+                development_mode: false,
+                revision_count: 0,
+              },
+            },
+      );
+      setActiveChat(convoId);
+      setConversationId(convoId);
+      setMessages(loaded);
+      setFailedPrompt(null);
+    } catch {
+      // conversation not found
+    }
+  }
+
+  async function handleDeleteConversation(convoId: string) {
+    try {
+      await deleteConversation(convoId);
+      if (conversationId === convoId) startFresh();
+      refreshConversations();
+    } catch {
+      // ignore
+    }
+  }
 
   async function sendPrompt(
     value: string,
@@ -59,6 +135,7 @@ export function ChatView() {
     });
     setInput("");
     setSending(true);
+    setSseTaskId(null);
     try {
       const response = await sendChatMessage({
         message: value,
@@ -70,10 +147,13 @@ export function ChatView() {
       });
       if (response.status === "failed") throw new Error("workflow_failed");
       setConversationId(response.conversation_id);
+      setSseTaskId(response.task_id);
       setMessages((current) => [
         ...current,
         { id: `aion-${Date.now()}`, role: "assistant", response },
       ]);
+      // Refresh sidebar
+      refreshConversations();
     } catch {
       setFailedPrompt(value);
     } finally {
@@ -90,6 +170,7 @@ export function ChatView() {
     setMessages([]);
     setFailedPrompt(null);
     setConversationId(undefined);
+    setSseTaskId(null);
   }
   function previousUserMessage(index: number) {
     for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
@@ -133,9 +214,43 @@ export function ChatView() {
           <p className="px-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-text">
             Recent conversations
           </p>
-          <p className="mt-3 px-2 text-[10px] leading-5 text-muted-text">
-            No conversations yet.
-          </p>
+          {conversations.length === 0 ? (
+            <p className="mt-3 px-2 text-[10px] leading-5 text-muted-text">
+              No conversations yet.
+            </p>
+          ) : (
+            <ul className="mt-3 space-y-1">
+              {conversations.map((convo) => (
+                <li key={convo.conversation_id}>
+                  <button
+                    type="button"
+                    onClick={() => loadConversation(convo.conversation_id)}
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-[11px] transition-colors",
+                      conversationId === convo.conversation_id
+                        ? "bg-primary/10 font-medium text-primary"
+                        : "text-muted-text hover:bg-white",
+                    )}>
+                    <MessageCircleMore className="size-3.5 shrink-0" />
+                    <span className="flex-1 truncate">{convo.title}</span>
+                    <span className="shrink-0 text-[9px] text-muted-text">
+                      {convo.message_count}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void handleDeleteConversation(convo.conversation_id);
+                      }}
+                      className="shrink-0 rounded p-0.5 text-muted-text hover:text-[#b14a4a]"
+                      aria-label={`Delete ${convo.title}`}>
+                      <Trash2 className="size-3" />
+                    </button>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </aside>
         <section className="flex min-h-[600px] min-w-0 flex-col">
           <div className="relative flex items-start gap-3 border-b px-4 py-3.5 sm:px-6">
@@ -195,6 +310,8 @@ export function ChatView() {
                   <ProcessingState
                     mode={mode}
                     selectedAgents={selectedAgents}
+                    taskId={sseTaskId}
+                    onTaskId={setSseTaskId}
                   />
                 )}
                 {failedPrompt && !sending && (

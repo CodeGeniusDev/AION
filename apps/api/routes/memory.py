@@ -1,6 +1,6 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, Query
 
-from models.memory import MemoryResponse
+from models.memory import MemoryRecordOut, MemoryRecordsListResponse, MemoryResponse
 from routes.chat import workflow_runner  # the same live singleton /api/chat writes to
 from services.memory_service import get_memory
 
@@ -10,3 +10,57 @@ router = APIRouter(tags=["memory"])
 @router.get("/memory", response_model=MemoryResponse)
 async def memory() -> MemoryResponse:
     return get_memory(workflow_runner.memory_store)
+
+
+@router.get("/memories/records", response_model=MemoryRecordsListResponse)
+async def list_memory_records(
+    memory_type: str | None = Query(default=None, description="Filter by type: episodic, semantic, task_context"),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+) -> MemoryRecordsListResponse:
+    """Browse memory records, newest first."""
+    store = workflow_runner.memory_store
+    all_records = store.list_recent(memory_type=memory_type, limit=2000)
+    total = len(all_records)
+    page = all_records[offset : offset + limit]
+    return MemoryRecordsListResponse(
+        items=[_record_to_out(r) for r in page],
+        total=total,
+    )
+
+
+@router.get("/memories/records/search", response_model=MemoryRecordsListResponse)
+async def search_memory_records(
+    q: str = Query(min_length=1, max_length=200, description="Search query"),
+    memory_type: str | None = Query(default=None),
+    limit: int = Query(default=20, ge=1, le=100),
+) -> MemoryRecordsListResponse:
+    """Search memory records by relevance."""
+    store = workflow_runner.memory_store
+    results = store.search(query=q, memory_type=memory_type, limit=limit)
+    return MemoryRecordsListResponse(
+        items=[_record_to_out(r.record) for r in results],
+        total=len(results),
+    )
+
+
+@router.delete("/memories/records/{memory_id}")
+async def delete_memory_record(memory_id: str) -> dict:
+    """Delete a single memory record."""
+    deleted = workflow_runner.memory_store.delete(memory_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Memory record not found")
+    return {"deleted": True, "memory_id": memory_id}
+
+
+def _record_to_out(record) -> MemoryRecordOut:
+    return MemoryRecordOut(
+        memory_id=record.memory_id,
+        type=record.type,
+        content=record.content,
+        task_id=record.task_id,
+        source_agent=record.source_agent,
+        verification_state=record.verification_state,
+        tags=record.tags,
+        created_at=record.created_at.isoformat(),
+    )

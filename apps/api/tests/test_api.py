@@ -14,7 +14,13 @@ def test_root() -> None:
 def test_health() -> None:
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "healthy", "service": "AION API"}
+    body = response.json()
+    assert body["status"] in ("healthy", "degraded", "unhealthy")
+    assert body["service"] == "AION API"
+    assert "version" in body
+    assert body["gemini"]["status"] in ("ok", "degraded", "error")
+    assert body["memory"]["status"] in ("ok", "degraded", "error")
+    assert body["agents"]["status"] in ("ok", "degraded", "error")
 
 
 def test_dashboard_reflects_real_backend_state() -> None:

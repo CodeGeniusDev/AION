@@ -127,3 +127,55 @@ export interface ResearchResponse {
   items: ResearchNote[];
   total: number;
 }
+
+// --- Health ---
+
+export interface HealthComponent {
+  status: "ok" | "degraded" | "error";
+  detail: string;
+}
+
+export interface HealthData {
+  status: "healthy" | "degraded" | "unhealthy";
+  service: string;
+  version: string;
+  gemini: HealthComponent;
+  memory: HealthComponent;
+  agents: HealthComponent;
+}
+
+// --- Conversations ---
+
+export interface ConversationSummary {
+  conversation_id: string;
+  title: string;
+  message_count: number;
+  last_message_at: string;
+  created_at: string;
+}
+
+export interface StoredMessage {
+  message_id: string;
+  role: "user" | "assistant";
+  content: string;
+  task_id: string | null;
+  created_at: string;
+}
+
+// --- Memory Records ---
+
+export interface MemoryRecordOut {
+  memory_id: string;
+  type: string;
+  content: string;
+  task_id: string;
+  source_agent: string;
+  verification_state: string;
+  tags: string[];
+  created_at: string;
+}
+
+export interface MemoryRecordsResponse {
+  items: MemoryRecordOut[];
+  total: number;
+}

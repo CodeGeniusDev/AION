@@ -2,14 +2,18 @@ import type {
   AgentsResponse,
   ChatRequest,
   ChatResponse,
+  ConversationSummary,
   DashboardData,
+  HealthData,
+  MemoryRecordsResponse,
   MemoryResponse,
   ResearchResponse,
+  StoredMessage,
   TasksResponse,
   WorkflowsResponse,
 } from "@/types";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 /** Default timeout for GET requests (fast, backend should respond instantly). */
 const DEFAULT_TIMEOUT_MS = 8_000;
@@ -70,4 +74,53 @@ export function getWorkflows(): Promise<WorkflowsResponse> {
 
 export function getResearch(): Promise<ResearchResponse> {
   return request<ResearchResponse>("/api/research");
+}
+
+// --- Health ---
+
+export function getHealth(): Promise<HealthData> {
+  return request<HealthData>("/health");
+}
+
+// --- Conversations ---
+
+export function getConversations(): Promise<ConversationSummary[]> {
+  return request<ConversationSummary[]>("/api/conversations");
+}
+
+export function getConversationMessages(conversationId: string): Promise<StoredMessage[]> {
+  return request<StoredMessage[]>(`/api/conversations/${conversationId}/messages`);
+}
+
+export function deleteConversation(conversationId: string): Promise<{ deleted: boolean }> {
+  return request<{ deleted: boolean }>(`/api/conversations/${conversationId}`, { method: "DELETE" });
+}
+
+// --- Memory Records ---
+
+export function listMemoryRecords(params?: { memory_type?: string; limit?: number; offset?: number }): Promise<MemoryRecordsResponse> {
+  const search = new URLSearchParams();
+  if (params?.memory_type) search.set("memory_type", params.memory_type);
+  if (params?.limit) search.set("limit", String(params.limit));
+  if (params?.offset) search.set("offset", String(params.offset));
+  const qs = search.toString();
+  return request<MemoryRecordsResponse>(`/api/memories/records${qs ? `?${qs}` : ""}`);
+}
+
+export function searchMemoryRecords(query: string, params?: { memory_type?: string; limit?: number }): Promise<MemoryRecordsResponse> {
+  const search = new URLSearchParams({ q: query });
+  if (params?.memory_type) search.set("memory_type", params.memory_type);
+  if (params?.limit) search.set("limit", String(params.limit));
+  return request<MemoryRecordsResponse>(`/api/memories/records/search?${search.toString()}`);
+}
+
+export function deleteMemoryRecord(memoryId: string): Promise<{ deleted: boolean }> {
+  return request<{ deleted: boolean }>(`/api/memories/records/${memoryId}`, { method: "DELETE" });
+}
+
+// --- SSE ---
+
+/** URL for the SSE event stream for a given task. */
+export function getEventsUrl(taskId: string): string {
+  return `${API_URL}/api/events/${taskId}`;
 }

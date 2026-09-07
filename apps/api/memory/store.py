@@ -91,6 +91,10 @@ class MemoryStoreInterface(ABC):
     def clear(self) -> None:
         """Remove all records. Administrative/test use only."""
 
+    @abstractmethod
+    def delete(self, memory_id: str) -> bool:
+        """Delete a single record by id. Returns True if deleted, False if not found."""
+
 
 class SQLiteMemoryStore(MemoryStoreInterface):
     """Real persistent storage. `db_path=":memory:"` gives an isolated,
@@ -258,6 +262,11 @@ class SQLiteMemoryStore(MemoryStoreInterface):
     def clear(self) -> None:
         with self._cursor() as cursor:
             cursor.execute("DELETE FROM memories")
+
+    def delete(self, memory_id: str) -> bool:
+        with self._cursor() as cursor:
+            cursor.execute("DELETE FROM memories WHERE memory_id = ?", (memory_id,))
+            return cursor.rowcount > 0
 
     @staticmethod
     def _row_to_record(row: sqlite3.Row) -> MemoryRecord:
