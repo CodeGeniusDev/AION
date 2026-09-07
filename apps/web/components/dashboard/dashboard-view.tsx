@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, Plus } from "lucide-react";
-import { dashboardFallback } from "@/data/demo-data";
+import { Plus } from "lucide-react";
 import { getDashboard } from "@/services/api";
 import type { DashboardData, TaskStatus } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -19,32 +18,24 @@ import { cn } from "@/utils/cn";
 type Filter = "all" | TaskStatus;
 
 export function DashboardView() {
-  const [data, setData] = useState<DashboardData>(dashboardFallback);
+  const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [usingFallback, setUsingFallback] = useState(false);
+  const [error, setError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [filter, setFilter] = useState<Filter>("all");
 
   useEffect(() => {
     let mounted = true;
+    setLoading(true);
     getDashboard()
       .then((response) => {
         if (mounted) {
-          setData({
-            ...response,
-            recent_tasks: response.recent_tasks.map((task, index) => ({
-              ...task,
-              created:
-                dashboardFallback.recent_tasks[index]?.created ?? "Recently",
-            })),
-          });
-          setUsingFallback(false);
+          setData(response);
+          setError(false);
         }
       })
       .catch(() => {
-        if (mounted) {
-          setData(dashboardFallback);
-          setUsingFallback(true);
-        }
+        if (mounted) setError(true);
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -52,14 +43,14 @@ export function DashboardView() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [loadAttempt]);
 
   const visibleTasks = useMemo(
     () =>
       filter === "all"
-        ? data.recent_tasks
-        : data.recent_tasks.filter((task) => task.status === filter),
-    [data.recent_tasks, filter],
+        ? data?.recent_tasks ?? []
+        : (data?.recent_tasks ?? []).filter((task) => task.status === filter),
+    [data, filter],
   );
 
   return (
@@ -76,15 +67,6 @@ export function DashboardView() {
         }
       />
       <div className="p-4 sm:p-6 lg:p-7">
-        {usingFallback && (
-          <div
-            role="status"
-            className="mb-5 flex items-center gap-2 rounded-full border border-[#ead7af] bg-[#fff9eb] px-4 py-2 text-xs text-[#7d621e]"
-          >
-            <AlertCircle className="size-4" />
-            Live API unavailable — showing a safe demo snapshot.
-          </div>
-        )}
         {loading ? (
           <div
             aria-label="Loading dashboard"
@@ -98,7 +80,17 @@ export function DashboardView() {
             <LoadingSkeleton className="h-[360px] lg:row-span-2" />
             <LoadingSkeleton className="h-[360px]" />
           </div>
-        ) : (
+        ) : error ? (
+          <EmptyState
+            title="Unable to load data"
+            description="AION could not reach the backend API. Check that the server is running, then retry."
+            action={
+              <Button variant="outline" size="sm" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>
+                Retry
+              </Button>
+            }
+          />
+        ) : data ? (
           <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.9fr)_minmax(280px,1fr)]">
             <div className="min-w-0 space-y-5">
               <div className="grid min-w-0 gap-5 sm:grid-cols-2 xl:grid-cols-3">
@@ -186,7 +178,7 @@ export function DashboardView() {
               </section>
             </div>
           </div>
-        )}
+        ) : null}
       </div>
     </>
   );

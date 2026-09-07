@@ -5,7 +5,6 @@ correlation ID propagation via main.py's middleware, and rate limiting on
 """
 
 import asyncio
-import time
 
 from fastapi.testclient import TestClient
 

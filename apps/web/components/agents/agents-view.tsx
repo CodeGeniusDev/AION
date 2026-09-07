@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import {
-  AlertCircle,
   ArrowUpRight,
   BookOpenCheck,
   Brain,
@@ -10,12 +9,12 @@ import {
   Database,
   Plus,
 } from "lucide-react";
-import { agents as agentsFallback } from "@/data/demo-data";
 import { getAgents } from "@/services/api";
 import type { AgentCardData } from "@/types";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ProgressIndicator } from "@/components/ui/progress-indicator";
+import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { PageHeader } from "@/components/layout/page-header";
 
@@ -23,24 +22,23 @@ const icons = [Compass, BookOpenCheck, Brain, Database];
 const tones = ["bg-soft-peach", "bg-soft-blue", "bg-soft-grey", "bg-soft-green"];
 
 export function AgentsView() {
-  const [agents, setAgents] = useState<AgentCardData[]>(agentsFallback);
+  const [agents, setAgents] = useState<AgentCardData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [usingFallback, setUsingFallback] = useState(false);
+  const [error, setError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   useEffect(() => {
     let mounted = true;
+    setLoading(true);
     getAgents()
       .then((response) => {
         if (mounted) {
           setAgents(response.items);
-          setUsingFallback(false);
+          setError(false);
         }
       })
       .catch(() => {
-        if (mounted) {
-          setAgents(agentsFallback);
-          setUsingFallback(true);
-        }
+        if (mounted) setError(true);
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -48,7 +46,7 @@ export function AgentsView() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [loadAttempt]);
 
   return (
     <>
@@ -64,16 +62,20 @@ export function AgentsView() {
         }
       />
       <div className="p-4 sm:p-6 lg:p-7">
-        {usingFallback && (
-          <div role="status" className="mb-5 flex items-center gap-2 rounded-full border border-[#ead7af] bg-[#fff9eb] px-4 py-2 text-xs text-[#7d621e]">
-            <AlertCircle className="size-4" />
-            Live API unavailable — showing a safe demo snapshot.
-          </div>
-        )}
         {loading ? (
           <div aria-label="Loading agents" className="grid gap-5 sm:grid-cols-2">
             {[0, 1, 2, 3].map((item) => <LoadingSkeleton key={item} className="h-[320px]" />)}
           </div>
+        ) : error ? (
+          <EmptyState
+            title="Unable to load data"
+            description="AION could not reach the backend API. Check that the server is running, then retry."
+            action={
+              <Button variant="outline" size="sm" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>
+                Retry
+              </Button>
+            }
+          />
         ) : (
           <div className="grid gap-5 sm:grid-cols-2">
             {agents.map((agent, index) => {

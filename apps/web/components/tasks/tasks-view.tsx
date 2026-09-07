@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, Plus, Search } from "lucide-react";
-import { taskRows } from "@/data/demo-data";
+import { Plus, Search } from "lucide-react";
 import { getTasks } from "@/services/api";
 import type { RecentTask, TaskStatus } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -15,26 +14,25 @@ import { cn } from "@/utils/cn";
 type Filter = "all" | TaskStatus;
 
 export function TasksView() {
-  const [allTasks, setAllTasks] = useState<RecentTask[]>(taskRows);
+  const [allTasks, setAllTasks] = useState<RecentTask[]>([]);
   const [loading, setLoading] = useState(true);
-  const [usingFallback, setUsingFallback] = useState(false);
+  const [error, setError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
 
   useEffect(() => {
     let mounted = true;
+    setLoading(true);
     getTasks()
       .then((response) => {
         if (mounted) {
           setAllTasks(response.items);
-          setUsingFallback(false);
+          setError(false);
         }
       })
       .catch(() => {
-        if (mounted) {
-          setAllTasks(taskRows);
-          setUsingFallback(true);
-        }
+        if (mounted) setError(true);
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -42,7 +40,7 @@ export function TasksView() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [loadAttempt]);
 
   const tasks = useMemo(
     () =>
@@ -58,12 +56,6 @@ export function TasksView() {
     <>
       <PageHeader eyebrow="Execution queue" title="Tasks" description="Track every request moving through the AION agent network." action={<Button><Plus className="mr-2 size-4" />New Task</Button>} />
       <div className="p-4 sm:p-6 lg:p-7">
-        {usingFallback && (
-          <div role="status" className="mb-5 flex items-center gap-2 rounded-full border border-[#ead7af] bg-[#fff9eb] px-4 py-2 text-xs text-[#7d621e]">
-            <AlertCircle className="size-4" />
-            Live API unavailable — showing a safe demo snapshot.
-          </div>
-        )}
         <section className="rounded-[24px] border bg-white p-5 sm:p-6">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-wrap gap-1 rounded-full bg-[#f2f4f7] p-1">
@@ -82,6 +74,18 @@ export function TasksView() {
           {loading ? (
             <div aria-label="Loading tasks" className="mt-5 space-y-3">
               {[0, 1, 2].map((item) => <LoadingSkeleton key={item} className="h-14" />)}
+            </div>
+          ) : error ? (
+            <div className="mt-5">
+              <EmptyState
+                title="Unable to load data"
+                description="AION could not reach the backend API. Check that the server is running, then retry."
+                action={
+                  <Button variant="outline" size="sm" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>
+                    Retry
+                  </Button>
+                }
+              />
             </div>
           ) : (
             <div className="mt-5 divide-y">

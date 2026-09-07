@@ -17,8 +17,6 @@ genuine confidence rather than an assumption.
 import asyncio
 import threading
 
-import pytest
-
 from memory.store import SQLiteMemoryStore
 from models.chat import ChatRequest
 from models.cognitive_memory import MemoryRecord

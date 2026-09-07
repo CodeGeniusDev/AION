@@ -12,7 +12,9 @@ class ResponseSynthesizer:
         if generated:
             return generated
         if outputs:
-            return f"Development mode: AION coordinated the requested work. {outputs[-1]}"
+            # Agent outputs may be live-generated even when this synthesis call
+            # failed, so don't label the response "Development mode" here.
+            return f"AION coordinated the requested work. {outputs[-1]}"
         return f"Development mode: AION received your request: {message}"
 
     async def revise(self, message: str, draft: str, model_service: GeminiService) -> str:

@@ -5,14 +5,10 @@ import {
   Archive,
   ArrowUpRight,
   Bell,
-  Bot,
   Check,
   CheckCheck,
-  CircleAlert,
   Clock3,
-  FileCheck2,
   MoreHorizontal,
-  ShieldCheck,
   Sparkles,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
@@ -32,61 +28,8 @@ interface AlertItem {
   icon: typeof Bell;
 }
 
-const initialAlerts: AlertItem[] = [
-  {
-    id: "task-complete",
-    title: "Research task completed",
-    description: "AION finished the solar energy research brief with a verified confidence score of 92%.",
-    time: "12 minutes ago",
-    category: "Task update",
-    unread: true,
-    tone: "bg-soft-blue text-primary",
-    icon: FileCheck2,
-  },
-  {
-    id: "agent-connected",
-    title: "Research Agent is ready",
-    description: "The Research Agent connected successfully and is available for your next workflow.",
-    time: "42 minutes ago",
-    category: "Agent activity",
-    unread: true,
-    tone: "bg-soft-green text-[#1d8a5b]",
-    icon: Bot,
-  },
-  {
-    id: "memory-saved",
-    title: "New memory saved",
-    description: "AION saved three useful context items from your latest planning conversation.",
-    time: "Yesterday",
-    category: "Memory",
-    unread: false,
-    tone: "bg-soft-peach text-[#b67224]",
-    icon: Sparkles,
-  },
-  {
-    id: "health-check",
-    title: "System health check passed",
-    description: "All connected services are operational. API, memory, and agents are online.",
-    time: "Yesterday",
-    category: "System",
-    unread: false,
-    tone: "bg-[#e9e7f6] text-[#6d61b2]",
-    icon: ShieldCheck,
-  },
-  {
-    id: "workflow-review",
-    title: "Workflow needs your review",
-    description: "The Critic Agent flagged one item in the product strategy workflow for confirmation.",
-    time: "Monday",
-    category: "Action needed",
-    unread: false,
-    tone: "bg-[#fff0d9] text-[#c37a21]",
-    icon: CircleAlert,
-  },
-];
-
 export function AlertView() {
-  const [alerts, setAlerts] = useState(initialAlerts);
+  const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [filter, setFilter] = useState<AlertFilter>("all");
 
   const unreadCount = alerts.filter((alert) => alert.unread).length;
@@ -204,7 +147,7 @@ export function AlertView() {
             <dl className="mt-5 space-y-4">
               <div className="flex items-center justify-between text-xs"><dt className="text-muted-text">Total updates</dt><dd className="font-semibold">{alerts.length}</dd></div>
               <div className="flex items-center justify-between text-xs"><dt className="text-muted-text">Unread</dt><dd className="font-semibold text-primary">{unreadCount}</dd></div>
-              <div className="flex items-center justify-between text-xs"><dt className="text-muted-text">Last update</dt><dd className="font-semibold">12 min ago</dd></div>
+              <div className="flex items-center justify-between text-xs"><dt className="text-muted-text">Last update</dt><dd className="font-semibold">—</dd></div>
             </dl>
             <div className="mt-5 rounded-[17px] bg-[#f6f8fb] p-3 text-[11px] leading-5 text-muted-text"><Sparkles className="mr-1 inline size-3 text-primary" /> AION will keep this space ready for future task and agent alerts.</div>
           </section>

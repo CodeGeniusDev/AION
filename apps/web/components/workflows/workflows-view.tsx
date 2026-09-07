@@ -1,34 +1,33 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AlertCircle, ArrowUpRight, Network, Plus, Route } from "lucide-react";
-import { workflows as workflowsFallback } from "@/data/demo-data";
+import { ArrowUpRight, Network, Plus, Route } from "lucide-react";
 import { getWorkflows } from "@/services/api";
 import type { WorkflowData } from "@/types";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { PageHeader } from "@/components/layout/page-header";
 
 export function WorkflowsView() {
-  const [workflows, setWorkflows] = useState<WorkflowData[]>(workflowsFallback);
+  const [workflows, setWorkflows] = useState<WorkflowData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [usingFallback, setUsingFallback] = useState(false);
+  const [error, setError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   useEffect(() => {
     let mounted = true;
+    setLoading(true);
     getWorkflows()
       .then((response) => {
         if (mounted) {
           setWorkflows(response.items);
-          setUsingFallback(false);
+          setError(false);
         }
       })
       .catch(() => {
-        if (mounted) {
-          setWorkflows(workflowsFallback);
-          setUsingFallback(true);
-        }
+        if (mounted) setError(true);
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -36,22 +35,26 @@ export function WorkflowsView() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [loadAttempt]);
 
   return (
     <>
       <PageHeader eyebrow="Agent orchestration" title="Workflows" description="Reusable paths that coordinate specialists from first request to reviewed result." action={<Button><Plus className="mr-2 size-4" />New Workflow</Button>} />
       <div className="p-4 sm:p-6 lg:p-7">
-        {usingFallback && (
-          <div role="status" className="mb-5 flex items-center gap-2 rounded-full border border-[#ead7af] bg-[#fff9eb] px-4 py-2 text-xs text-[#7d621e]">
-            <AlertCircle className="size-4" />
-            Live API unavailable — showing a safe demo snapshot.
-          </div>
-        )}
         {loading ? (
           <div aria-label="Loading workflows" className="grid gap-5 lg:grid-cols-3">
             {[0, 1, 2].map((item) => <LoadingSkeleton key={item} className="h-[260px]" />)}
           </div>
+        ) : error ? (
+          <EmptyState
+            title="Unable to load data"
+            description="AION could not reach the backend API. Check that the server is running, then retry."
+            action={
+              <Button variant="outline" size="sm" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>
+                Retry
+              </Button>
+            }
+          />
         ) : (
           <div className="grid gap-5 lg:grid-cols-3">
             {workflows.map((workflow, index) => (

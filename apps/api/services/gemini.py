@@ -8,7 +8,10 @@ class GeminiService:
 
     def __init__(self) -> None:
         self.api_key = settings.gemini_api_key
-        self.model = "gemini-2.5-flash"
+        # gemini-2.5-flash returns 404 "no longer available to new users" for
+        # keys issued since its deprecation; Google's error directs new keys to
+        # gemini-3.6-flash.
+        self.model = "gemini-3.6-flash"
         self.generated_live_response = False
 
     def is_configured(self) -> bool:

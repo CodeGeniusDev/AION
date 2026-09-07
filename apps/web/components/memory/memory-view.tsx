@@ -1,48 +1,39 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AlertCircle, ArrowUpRight, BrainCircuit, Database, HardDrive, Search } from "lucide-react";
+import { ArrowUpRight, BrainCircuit, Database, HardDrive, Search } from "lucide-react";
 import { getMemory } from "@/services/api";
 import type { MemoryCategory } from "@/types";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { ProgressIndicator } from "@/components/ui/progress-indicator";
 import { SectionCard } from "@/components/ui/section-card";
 
-const memoryFallback = {
-  categories: [
-    { id: "short-term", title: "Short-Term Memory", description: "Active task context and recent conversation state.", type: "short_term" as const, count: "18 items", usage: 64 },
-    { id: "long-term", title: "Long-Term Memory", description: "Durable facts, decisions, and learned preferences.", type: "long_term" as const, count: "24 records", usage: 42 },
-    { id: "vector", title: "Vector Memory", description: "Semantic context prepared for future similarity search.", type: "vector" as const, count: "1,284 vectors", usage: 76 },
-  ],
-  policies: ["Task context expires after 7 days", "Reviewed decisions persist", "Sensitive inputs stay local"],
-};
-
 const icons = [BrainCircuit, HardDrive, Database];
 const tones = ["bg-soft-peach", "bg-soft-blue", "bg-soft-green"];
 
 export function MemoryView() {
-  const [categories, setCategories] = useState<MemoryCategory[]>(memoryFallback.categories);
-  const [policies, setPolicies] = useState<string[]>(memoryFallback.policies);
+  const [categories, setCategories] = useState<MemoryCategory[]>([]);
+  const [policies, setPolicies] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [usingFallback, setUsingFallback] = useState(false);
+  const [error, setError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   useEffect(() => {
     let mounted = true;
+    setLoading(true);
     getMemory()
       .then((response) => {
         if (mounted) {
           setCategories(response.categories);
           setPolicies(response.policies);
-          setUsingFallback(false);
+          setError(false);
         }
       })
       .catch(() => {
-        if (mounted) {
-          setCategories(memoryFallback.categories);
-          setPolicies(memoryFallback.policies);
-          setUsingFallback(true);
-        }
+        if (mounted) setError(true);
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -50,18 +41,12 @@ export function MemoryView() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [loadAttempt]);
 
   return (
     <>
       <PageHeader eyebrow="Shared context" title="Memory" description="See how AION keeps the right context available across tasks and agents." />
       <div className="p-4 sm:p-6 lg:p-7">
-        {usingFallback && (
-          <div role="status" className="mb-5 flex items-center gap-2 rounded-full border border-[#ead7af] bg-[#fff9eb] px-4 py-2 text-xs text-[#7d621e]">
-            <AlertCircle className="size-4" />
-            Live API unavailable — showing a safe demo snapshot.
-          </div>
-        )}
         <label className="relative block max-w-lg">
           <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-text" />
           <span className="sr-only">Search memory</span>
@@ -71,7 +56,20 @@ export function MemoryView() {
           <div aria-label="Loading memory" className="mt-5 grid gap-5 lg:grid-cols-3">
             {[0, 1, 2].map((item) => <LoadingSkeleton key={item} className="h-[280px]" />)}
           </div>
+        ) : error ? (
+          <div className="mt-5">
+            <EmptyState
+              title="Unable to load data"
+              description="AION could not reach the backend API. Check that the server is running, then retry."
+              action={
+                <Button variant="outline" size="sm" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>
+                  Retry
+                </Button>
+              }
+            />
+          </div>
         ) : (
+          <>
           <div className="mt-5 grid gap-5 lg:grid-cols-3">
             {categories.map((category, index) => {
               const Icon = icons[index % icons.length];
@@ -93,17 +91,18 @@ export function MemoryView() {
               );
             })}
           </div>
+          <SectionCard className="mt-5" title="Memory policy" description="How AION decides what context should be retained.">
+            <div className="grid gap-3 sm:grid-cols-3">
+              {policies.map((item, index) => (
+                <div key={item} className="rounded-[18px] bg-[#f7f9fc] p-4">
+                  <span className="text-[10px] font-semibold text-primary">0{index + 1}</span>
+                  <p className="mt-2 text-xs font-medium">{item}</p>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+          </>
         )}
-        <SectionCard className="mt-5" title="Memory policy" description="How AION decides what context should be retained.">
-          <div className="grid gap-3 sm:grid-cols-3">
-            {policies.map((item, index) => (
-              <div key={item} className="rounded-[18px] bg-[#f7f9fc] p-4">
-                <span className="text-[10px] font-semibold text-primary">0{index + 1}</span>
-                <p className="mt-2 text-xs font-medium">{item}</p>
-              </div>
-            ))}
-          </div>
-        </SectionCard>
       </div>
     </>
   );

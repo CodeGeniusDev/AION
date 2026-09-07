@@ -11,7 +11,6 @@ every pre-existing test intact.
 import asyncio
 from dataclasses import replace
 
-import pytest
 from fastapi.testclient import TestClient
 
 import auth.dependency

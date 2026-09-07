@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AlertCircle, ArrowUpRight, FileText, FlaskConical, Lightbulb, Plus } from "lucide-react";
+import { ArrowUpRight, FileText, FlaskConical, Lightbulb, Plus } from "lucide-react";
 import { getResearch } from "@/services/api";
 import type { ResearchNote } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -9,33 +9,26 @@ import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 
-const notesFallback: ResearchNote[] = [
-  { id: "n1", title: "Agent handoff patterns", type: "Architecture note", date: "Updated today" },
-  { id: "n2", title: "Memory retrieval benchmarks", type: "Experiment", date: "Updated Tuesday" },
-  { id: "n3", title: "Confidence scoring model", type: "Working draft", date: "Updated last week" },
-];
-
 const tones = ["bg-soft-blue", "bg-soft-green", "bg-soft-peach"];
 
 export function ResearchView() {
-  const [notes, setNotes] = useState<ResearchNote[]>(notesFallback);
+  const [notes, setNotes] = useState<ResearchNote[]>([]);
   const [loading, setLoading] = useState(true);
-  const [usingFallback, setUsingFallback] = useState(false);
+  const [error, setError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   useEffect(() => {
     let mounted = true;
+    setLoading(true);
     getResearch()
       .then((response) => {
         if (mounted) {
           setNotes(response.items);
-          setUsingFallback(false);
+          setError(false);
         }
       })
       .catch(() => {
-        if (mounted) {
-          setNotes(notesFallback);
-          setUsingFallback(true);
-        }
+        if (mounted) setError(true);
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -43,18 +36,12 @@ export function ResearchView() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [loadAttempt]);
 
   return (
     <>
       <PageHeader eyebrow="Lab notebook" title="Research" description="Keep architecture notes, experiments, and promising ideas close to the system." action={<Button><Plus className="mr-2 size-4" />New Note</Button>} />
       <div className="p-4 sm:p-6 lg:p-7">
-        {usingFallback && (
-          <div role="status" className="mb-5 flex items-center gap-2 rounded-full border border-[#ead7af] bg-[#fff9eb] px-4 py-2 text-xs text-[#7d621e]">
-            <AlertCircle className="size-4" />
-            Live API unavailable — showing a safe demo snapshot.
-          </div>
-        )}
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1.45fr)_minmax(280px,.55fr)]">
           <section className="rounded-[24px] border bg-white p-5 sm:p-6">
             <div className="flex items-center justify-between">
@@ -67,6 +54,18 @@ export function ResearchView() {
             {loading ? (
               <div aria-label="Loading research notes" className="mt-5 space-y-3">
                 {[0, 1, 2].map((item) => <LoadingSkeleton key={item} className="h-16" />)}
+              </div>
+            ) : error ? (
+              <div className="mt-5">
+                <EmptyState
+                  title="Unable to load data"
+                  description="AION could not reach the backend API. Check that the server is running, then retry."
+                  action={
+                    <Button variant="outline" size="sm" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>
+                      Retry
+                    </Button>
+                  }
+                />
               </div>
             ) : notes.length ? (
               <div className="mt-5 divide-y">

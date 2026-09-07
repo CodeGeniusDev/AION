@@ -25,7 +25,6 @@ from models.knowledge import ResearchResult
 from services.gemini import GeminiService
 from tools.executor import ToolExecutor
 from tools.knowledge_providers import build_knowledge_registry
-from tools.registry import ToolRegistryInterface
 
 logger = get_logger("orchestration.workflow_runner")
 
