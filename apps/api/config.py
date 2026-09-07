@@ -34,6 +34,11 @@ class Settings:
     # deployment once API keys have been provisioned via auth/store.py.
     require_auth: bool = os.getenv("AION_REQUIRE_AUTH", "0") == "1"
     default_tenant_id: str = os.getenv("AION_DEFAULT_TENANT_ID", "default")
+    # SQLite file path for Cognitive Memory persistence. Default is empty
+    # (which means in-memory SQLite, lost on restart). Set to a real path
+    # (e.g. "/data/aion_memory.db") for durability across process restarts.
+    # Docker Compose mounts a volume at /data by default.
+    memory_db_path: str = os.getenv("AION_MEMORY_DB_PATH", "")
 
 
 settings = Settings()

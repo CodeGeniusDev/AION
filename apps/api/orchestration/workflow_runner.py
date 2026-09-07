@@ -25,6 +25,7 @@ from models.knowledge import ResearchResult
 from services.gemini import GeminiService, live_response_generated
 from tools.executor import ToolExecutor
 from tools.knowledge_providers import build_knowledge_registry
+from tools.schema import tools_to_declarations
 
 logger = get_logger("orchestration.workflow_runner")
 
@@ -92,15 +93,17 @@ class WorkflowRunner:
         self._max_retained_tasks = max_retained_tasks or settings.max_retained_tasks
         self._task_history: dict[str, None] = {}
         # Cognitive Memory: real SQLite persistence behind a replaceable
-        # interface (memory/store.py). Default is an in-memory SQLite
+        # interface (memory/store.py). When AION_MEMORY_DB_PATH is set in
+        # the environment, uses a file-backed SQLite for durability across
+        # process restarts. Otherwise defaults to an in-memory SQLite
         # database — genuine SQL storage for the life of this WorkflowRunner
-        # instance (which, via routes/chat.py's module-level singleton, is
-        # the app's entire process lifetime), but not durable across a
-        # process restart. For durability across restarts, construct with
-        # memory_store=SQLiteMemoryStore("/path/to/file.db") — no other
-        # code changes required, since everything here depends only on
-        # MemoryStoreInterface.
-        self.memory_store = memory_store or SQLiteMemoryStore(":memory:")
+        # instance, but not durable across a process restart.
+        if memory_store is not None:
+            self.memory_store = memory_store
+        elif settings.memory_db_path:
+            self.memory_store = SQLiteMemoryStore(settings.memory_db_path)
+        else:
+            self.memory_store = SQLiteMemoryStore(":memory:")
         self.enable_memory_persistence = enable_memory_persistence
         # Tool System: a fully real, callable pipeline
         # (discover -> execute -> verify -> memory-eligible), available via
@@ -300,34 +303,91 @@ class WorkflowRunner:
         critic_approved = False
         revision_count = 0
 
-        for agent_id in decision.execution_order:
+        # --- Tool invocation via Gemini function calling ----------------
+        # Before running agents, give the LLM a chance to invoke tools
+        # (calculator, text analysis, datetime). If Gemini decides to use
+        # tools, execute them and add results as context for agents.
+        tool_results: list[str] = []
+        tool_identities = self.tool_executor.registry.list_identities()
+        if tool_identities and self.model_service.is_configured():
+            declarations = tools_to_declarations(tool_identities)
+
+            async def _execute_tool_fn(name: str, args: dict) -> str:
+                output = await self.execute_tool(name, task_id=task_id, parameters=args)
+                return output.content if output.success else (output.error or "Tool execution failed")
+
+            tool_response = await self.model_service.generate_with_tools(
+                role_instruction="You are AION's tool coordinator. Use available tools when the user's request involves computation, text analysis, or time lookup. Always include tool results in your response.",
+                prompt=request.message,
+                tool_declarations=declarations,
+                execute_fn=_execute_tool_fn,
+            )
+            if tool_response:
+                tool_results.append(tool_response)
+                bus.publish(CognitiveMessage(
+                    task_id=task_id, source_agent="tool_system", target_agent=None,
+                    intent="tool_invocation_complete",
+                    content=f"Tool invocation produced results for agent context",
+                    status="completed",
+                ))
+                # Record tool invocation as a synthetic "agent" for the response
+                used_agents.append(UsedAgent(
+                    id="tool_system", name="Tool System",
+                    status="completed", summary="Invoked tools via LLM function calling",
+                ))
+
+        # --- Parallel agent execution via asyncio.gather ---------------
+        # Agents are independent of each other (they all receive the same
+        # memories + tool_results context). Running them in parallel reduces
+        # total latency from sum(agent_times) to max(agent_times).
+        async def _run_agent(agent_id: str) -> tuple[str, str | None, str, float]:
+            """Run a single agent, returning (agent_id, output_or_None, summary, latency_ms)."""
             agent = self.agents[agent_id]
-            bus.publish(CognitiveMessage(task_id=task_id, source_agent="aion", target_agent=agent_id, intent="execute", content=request.message, status="processing"))
             step_started = perf_counter()
             try:
-                context: dict[str, Any] = {"memories": memories, "draft": outputs[-1] if outputs else ""}
+                context: dict[str, Any] = {"memories": memories, "draft": "", "tool_results": tool_results}
                 output = await agent.run(request.message, context, self.model_service)
-                outputs.append(output)
-                agent_outputs[agent_id] = output
+                latency = (perf_counter() - step_started) * 1000
                 summary = agent.completion_summary
                 if agent_id == "memory":
                     summary = f"Retrieved {len(memories)} related memories"
+                return (agent_id, output, summary, latency)
+            except Exception:
+                latency = (perf_counter() - step_started) * 1000
+                return (agent_id, None, "Could not complete the assigned step", latency)
+
+        # Publish "execute" messages for all agents
+        for agent_id in decision.execution_order:
+            bus.publish(CognitiveMessage(task_id=task_id, source_agent="aion", target_agent=agent_id, intent="execute", content=request.message, status="processing"))
+
+        # Run all agents in parallel
+        results = await asyncio.gather(*[_run_agent(aid) for aid in decision.execution_order])
+
+        for agent_id, output, summary, latency in results:
+            agent = self.agents[agent_id]
+            if output is not None:
+                outputs.append(output)
+                agent_outputs[agent_id] = output
                 used_agents.append(UsedAgent(id=agent_id, name=agent.name, status="completed", summary=summary))
                 bus.publish(CognitiveMessage(task_id=task_id, source_agent=agent_id, target_agent="aion", intent="result", content=summary, confidence=0.8, status="completed"))
-                self._record_run_telemetry(agent_id, success=True, latency_ms=(perf_counter() - step_started) * 1000)
-            except Exception:
+                self._record_run_telemetry(agent_id, success=True, latency_ms=latency)
+            else:
                 errors += 1
-                used_agents.append(UsedAgent(id=agent_id, name=agent.name, status="failed", summary="Could not complete the assigned step"))
-                self._record_run_telemetry(agent_id, success=False, latency_ms=(perf_counter() - step_started) * 1000)
+                used_agents.append(UsedAgent(id=agent_id, name=agent.name, status="failed", summary=summary))
+                self._record_run_telemetry(agent_id, success=False, latency_ms=latency)
 
-        draft = await self.synthesizer.synthesize(request.message, outputs, self.model_service)
+        # Include tool results at the beginning of outputs for synthesis
+        all_outputs = tool_results + outputs
+        draft = await self.synthesizer.synthesize(request.message, all_outputs, self.model_service)
         if "critic" in decision.selected_agents and request.verification_enabled:
             critic = self.agents["critic"]
-            critic_approved = isinstance(critic, CriticAgent) and critic.approve(draft)
-            if not critic_approved:
-                draft = await self.synthesizer.revise(request.message, draft, self.model_service)
-                revision_count = 1
-                critic_approved = isinstance(critic, CriticAgent) and critic.approve(draft)
+            if isinstance(critic, CriticAgent):
+                critic_approved, issues = await critic.review_with_llm(draft, request.message, self.model_service)
+                if not critic_approved:
+                    logger.info("critic_issues task_id=%s issues=%d", task_id, len(issues))
+                    draft = await self.synthesizer.revise(request.message, draft, self.model_service)
+                    revision_count = 1
+                    critic_approved, _ = await critic.review_with_llm(draft, request.message, self.model_service)
 
         if self.enable_immune:
             self._run_immune_evaluation(task_id=task_id, draft=draft, agent_outputs=agent_outputs, memories=memories, bus=bus)

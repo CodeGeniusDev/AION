@@ -2,10 +2,10 @@ services:
   web:
     build:
       context: ./apps/web
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
     ports:
       - "3000:3000"
-    environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8000
     depends_on:
       - api
 
@@ -22,4 +22,10 @@ services:
     # API with every credential empty.
     env_file:
       - ./apps/api/.env
+    environment:
+      AION_MEMORY_DB_PATH: /data/aion_memory.db
+    volumes:
+      - aion_data:/data
 
+volumes:
+  aion_data:
