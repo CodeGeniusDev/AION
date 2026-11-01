@@ -65,6 +65,14 @@ class ApprovalsResponse(BaseModel):
     total: int
 
 
+class DesktopHealthResponse(BaseModel):
+    """Bridge connectivity for the Desktop tab. Carries only the bridge's
+    public health status — never the URL, secret, tokens or tool data."""
+
+    reachable: bool
+    status: str | None = None
+
+
 class AuditEvent(BaseModel):
     """One append-only audit-log entry. `detail` is sanitized and must
     never contain parameter values, the bridge secret, or grant tokens."""

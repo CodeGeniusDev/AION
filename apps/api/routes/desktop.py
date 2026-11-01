@@ -10,13 +10,36 @@ route never touches the bridge secret.
 from fastapi import APIRouter, Depends, HTTPException
 
 from auth.dependency import get_current_principal, resolve_tenant_id, require_role
-from models.approval import ApprovalExecuteResponse, ApprovalExecutionRequest
+from models.approval import (
+    ApprovalExecuteResponse,
+    ApprovalExecutionRequest,
+    DesktopHealthResponse,
+)
 from models.auth import Role
 from services.approval_service import ApprovalError, get_approval_service
+from services.desktop_bridge_client import BridgeError
 
 router = APIRouter(tags=["desktop"])
 
 WRITE_ROLES: set[Role] = {"admin", "user"}
+
+
+@router.get("/desktop/health", response_model=DesktopHealthResponse)
+async def desktop_health(
+    principal=Depends(get_current_principal),
+) -> DesktopHealthResponse:
+    """Bridge connectivity for the Desktop tab. Always 200: an offline
+    bridge is data (reachable=false), not an HTTP error. The probe sends
+    no secret and the response carries no URL, token or tool material."""
+    client = get_approval_service().bridge()
+    try:
+        payload = client.health()
+    except BridgeError:
+        return DesktopHealthResponse(reachable=False, status=None)
+    status = payload.get("status") if isinstance(payload, dict) else None
+    return DesktopHealthResponse(
+        reachable=True, status=status if isinstance(status, str) else "healthy",
+    )
 
 
 @router.post("/desktop/execute", response_model=ApprovalExecuteResponse, status_code=202)

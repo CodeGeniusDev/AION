@@ -38,12 +38,21 @@ class MockBridgeClient:
     """Stands in for DesktopBridgeClient. Records every call so tests can
     assert the executor was called exactly once / not at all."""
 
-    def __init__(self, *, fail_register=False, fail_execute=False, result=None):
+    def __init__(self, *, fail_register=False, fail_execute=False, result=None,
+                 fail_health=False):
         self.register_calls = []
         self.execute_calls = []
+        self.health_calls = 0
         self.fail_register = fail_register
         self.fail_execute = fail_execute
+        self.fail_health = fail_health
         self.result = result if result is not None else {"success": True, "duration_ms": 1.0}
+
+    def health(self):
+        self.health_calls += 1
+        if self.fail_health:
+            raise BridgeError("bridge unreachable: ConnectError")
+        return {"status": "healthy", "service": "AION Desktop Agent Bridge"}
 
     def register_grant(self, **kwargs):
         self.register_calls.append(kwargs)
@@ -464,3 +473,33 @@ def test_async_dispatch_mode_executes_after_202(store, monkeypatch):
     assert store.get(approval_id).status == "completed"
     # And the consumed claim still 409s afterwards in async mode too.
     assert client.post(f"/api/approvals/{approval_id}/approve").status_code == 409
+
+
+# ---------------------------------------------------------------------------
+# Bridge health probe (GET /api/desktop/health) — phase 3
+# ---------------------------------------------------------------------------
+
+def test_desktop_health_reports_reachable_bridge(store, bridge):
+    response = client.get("/api/desktop/health")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["reachable"] is True
+    assert body["status"] == "healthy"
+    assert bridge.health_calls == 1
+    # The wire carries zero credential/URL material — a health check must
+    # never leak the bridge secret, a grant token, or the bridge address.
+    text = json.dumps(body)
+    assert SECRET not in text and TOKEN not in text
+    assert "http" not in text.lower()
+
+
+def test_desktop_health_reports_offline_bridge_without_error(store, monkeypatch):
+    """An unreachable bridge is data (reachable=false, HTTP 200), never an
+    HTTP error — the Desktop tab renders an offline pill, not a crash."""
+    mock = MockBridgeClient(fail_health=True)
+    monkeypatch.setattr(
+        approval_service_module._default_approval_service, "_bridge_client", mock,
+    )
+    response = client.get("/api/desktop/health")
+    assert response.status_code == 200
+    assert response.json() == {"reachable": False, "status": None}

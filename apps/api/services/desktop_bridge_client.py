@@ -65,6 +65,27 @@ class DesktopBridgeClient:
         except ValueError as exc:
             raise BridgeError("bridge returned a non-JSON response") from exc
 
+    def health(self) -> dict[str, Any]:
+        """Connectivity probe. The bridge /health route needs no
+        authentication, so this call deliberately carries NO secret —
+        a health check must never put the credential on the wire."""
+        try:
+            response = httpx.get(
+                f"{self.base_url}/health",
+                timeout=min(self.timeout_seconds, 3.0),
+            )
+        except httpx.HTTPError as exc:
+            raise BridgeError(f"bridge unreachable: {type(exc).__name__}") from exc
+        if response.status_code >= 400:
+            raise BridgeError(
+                f"bridge returned {response.status_code}",
+                status_code=response.status_code,
+            )
+        try:
+            return response.json()
+        except ValueError as exc:
+            raise BridgeError("bridge returned a non-JSON response") from exc
+
     def register_grant(
         self, *, approval_id: str, tool: str, token: str, expires_at: str,
     ) -> None:
