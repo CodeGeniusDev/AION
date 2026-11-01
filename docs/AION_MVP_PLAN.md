@@ -38,7 +38,7 @@ The fix is not a rewrite. It is a **glue layer**: a local Python agent (in the s
 | Auth                | Opt-in API-key auth (`AION_REQUIRE_AUTH`), tenant resolution                                         |
 | Rate limiting       | Per-IP + per-key rate limiter                                                                        |
 | Observability       | Request ID/correlation IDs, structured logging, metrics                                              |
-| Testing             | 394 backend tests + 9 desktop bridge tests + Playwright e2e smoke test                              |
+| Testing             | 426 backend tests + 9 desktop bridge tests + Playwright e2e smoke test                              |
 | Docker              | Compose for web + api                                                                                |
 | UI / responsiveness | Tailwind + Radix primitives; layout is mobile-responsive already (sidebar, top nav, responsive grid) |
 
@@ -90,7 +90,7 @@ AION is the **brain**. The lower layer is the **hands**: tools that actually do 
 - [x] Verify AION runs end-to-end (backend + frontend + chat)
 - [x] Add a persistent `tasks` table + `task_status` flow (pending → running → completed/failed)
 - [x] Add a `local_tools` registry mapping tool names → Python scripts / functions
-- [ ] Wire `execute_tool(tool_name, params)` into the chat flow (planned — chat must only be able to *create* a pending approval for protected desktop tools, never approve or execute; not built yet)
+- [x] Chat → approval link (Phase 2): a chat message can *create* a pending approval for a protected desktop tool via the existing approval service. The model can never approve, execute, or see grant tokens — only the human queue (`/tasks` → `POST /api/approvals/{id}/approve`) executes. Gemini tool declarations remain calculator/text_analysis/current_datetime only.
 - [ ] Add a simple "Desktop" tab in the dashboard showing active tasks (planned)
 
 ### MVP-2 — Desktop automation (highest "wow")
@@ -191,8 +191,10 @@ file_write, file_copy`) now requires an explicit human approval, gated
    secret no longer means arbitrary desktop control, and no action can run
    twice or unapproved. See `README.md` → _Human-in-the-loop desktop tool
    approvals_ and `docs/LOCAL_AGENT_ARCHITECTURE.md` → _Approval grant
-   sequence_. Chat-driven approval requests (agent → pending approval) are
-   a deliberate follow-up; initiation is REST-only today.
+   sequence_. Chat-driven approval requests (chat → pending approval) shipped
+   in Phase 2: the chat pipeline can only *create* pending approvals for
+   protected tools; approval, dispatch and execution remain human/REST-only
+   and the model never sees grant tokens.
 
 ---
 

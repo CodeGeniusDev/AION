@@ -50,3 +50,26 @@ so conflicts can be checked before merge.
 - `apps/api/tests/test_workflows.py` — 22 new tests
 - Frontend only (no contract changes): `types/index.ts`, `services/api.ts`,
   `components/workflows/workflows-view.tsx`
+
+### Phase 2 — Chat-driven approval requests
+- `apps/api/services/chat_approval.py` — NEW: chat-side integration that can
+  only call `request_execution` (create pending approvals). Deterministic
+  clause-anchored heuristic + optional single LLM classification (no function
+  declarations); parameters validated against a per-tool whitelist with a
+  forbidden-key scrub (`token|grant|secret|hash|approval|approve`); fails
+  closed on any ambiguity. Never touches the bridge or the approve path.
+- `apps/api/models/chat.py` — additive `PendingApprovalInfo` model + optional
+  `ChatResponse.pending_approval` (backward compatible; existing fields
+  unchanged)
+- `apps/api/routes/chat.py` — lazy-import hook after `workflow_runner.run`:
+  prepends an "Approval required" notice and links to the queue
+  (`/tasks`); hook failures degrade to a normal chat response
+- `apps/api/tests/test_chat_approvals.py` — 32 new tests: detections /
+  non-detections, injection attempts (self-approval wording, tool-call
+  spoofing, forbidden keys), proof that the chat path makes zero privileged
+  calls (`approve_and_claim`/`reject`/`dispatch`) and that Gemini
+  declarations remain calculator/text_analysis/current_datetime only
+- No changes to `config.py`, `.env.example`, or `main.py` this phase
+- Frontend (contract-compatible): `types/index.ts` (+`PendingApprovalInfo`,
+  optional `pending_approval`), `components/chat/aion-message.tsx`
+  (amber "Approval pending" card linking to the queue)
