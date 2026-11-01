@@ -157,7 +157,10 @@ def _executor_for(tool_name: str, workspace: Path, allowed_dirs: list[Path]):
                 ["osascript", "-e", 'tell application "System Events" to get name of processes'],
                 capture_output=True, text=True, timeout=15,
             )
-            apps = [a for a in result.stdout.strip().split("\n") if a] \
+            # osascript returns the process names as ONE comma-separated line;
+            # normalise newlines too so either layout parses correctly.
+            stdout = result.stdout.replace("\n", ",")
+            apps = [a.strip() for a in stdout.split(",") if a.strip()] \
                 if result.returncode == 0 else []
             return {"success": True, "count": len(apps), "applications": apps}
         return _exec
