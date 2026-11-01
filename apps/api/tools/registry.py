@@ -93,6 +93,9 @@ class ToolRegistry(ToolRegistryInterface):
     def list_identities(self) -> list[ToolIdentity]:
         return list(self._identities.values())
 
+    def list_tool_ids(self) -> list[str]:
+        return list(self._identities.keys())
+
     def find_by_capability(
         self, *, capability_name: str | None = None, domain: Domain | None = None,
         min_declared_proficiency: float = 0.0, available_only: bool = True,
