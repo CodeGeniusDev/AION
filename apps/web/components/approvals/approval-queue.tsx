@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Check, ShieldAlert, X } from "lucide-react";
 import {
   approveAction,
@@ -43,7 +43,7 @@ function parameterSummary(parameters: Record<string, unknown>): string {
     .join(" · ");
 }
 
-export function ApprovalQueue() {
+export function ApprovalQueue({ fallback = null }: { fallback?: ReactNode }) {
   const [approvals, setApprovals] = useState<ApprovalRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
@@ -141,7 +141,7 @@ export function ApprovalQueue() {
     );
   }
 
-  if (visible.length === 0) return null;
+  if (visible.length === 0) return <>{fallback}</>;
 
   return (
     <section

@@ -310,6 +310,12 @@ export interface ApprovalsResponse {
   total: number;
 }
 
+/** GET /api/desktop/health — bridge connectivity, never credentials. */
+export interface DesktopHealth {
+  reachable: boolean;
+  status: string | null;
+}
+
 /** 202 envelope from POST /api/desktop/execute and .../approve. */
 export interface ApprovalExecuteResponse {
   approval_id: string;

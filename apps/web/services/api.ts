@@ -5,10 +5,12 @@ import type {
   ApprovalExecuteResponse,
   ApprovalRecord,
   ApprovalsResponse,
+  AuditResponse,
   ChatRequest,
   ChatResponse,
   ConversationSummary,
   DashboardData,
+  DesktopHealth,
   HealthData,
   MemoryRecordsResponse,
   MemoryResponse,
@@ -283,6 +285,28 @@ export function requestDesktopExecution(payload: {
 
 export function getPendingApprovals(): Promise<ApprovalsResponse> {
   return request<ApprovalsResponse>("/api/approvals?status=pending_approval");
+}
+
+/** All approvals for the tenant, newest first (Desktop tab history). */
+export function getApprovals(params?: {
+  status?: string;
+  limit?: number;
+}): Promise<ApprovalsResponse> {
+  const search = new URLSearchParams();
+  if (params?.status) search.set("status", params.status);
+  if (params?.limit) search.set("limit", String(params.limit));
+  const qs = search.toString();
+  return request<ApprovalsResponse>(`/api/approvals${qs ? `?${qs}` : ""}`);
+}
+
+/** Append-only execution audit trail (sanitized server-side, read-only). */
+export function getAudit(limit = 12): Promise<AuditResponse> {
+  return request<AuditResponse>(`/api/audit?limit=${limit}`);
+}
+
+/** Desktop bridge connectivity. Offline bridge is data, not an error. */
+export function getDesktopHealth(): Promise<DesktopHealth> {
+  return request<DesktopHealth>("/api/desktop/health");
 }
 
 /** Explicit human approval — the backend claims the request exactly once

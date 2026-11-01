@@ -14,6 +14,7 @@ import {
   ListTodo,
   MemoryStick,
   MessageCircleMore,
+  Monitor,
   Network,
   Plus,
   Settings,
@@ -49,6 +50,7 @@ const groups: Array<{ label: string; items: NavItem[] }> = [
   {
     label: "System",
     items: [
+      { label: "Desktop", href: "/desktop", icon: Monitor },
       { label: "Research", href: "/research", icon: FlaskConical },
       { label: "Settings", href: "/settings", icon: Settings },
     ],
