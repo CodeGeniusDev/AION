@@ -71,6 +71,28 @@ async def chat(
 
     response = await workflow_runner.run(payload, available_memory=history_context or None, tenant_id=tenant_id)
 
+    # Phase 2: chat-driven approval requests. A message asking for a
+    # protected desktop action creates a PENDING approval only — this
+    # path cannot approve, execute, or see grant tokens (see
+    # services/chat_approval.py). Imported lazily because
+    # services.approval_service back-references this module for alerts.
+    try:
+        from services.chat_approval import handle_chat_desktop_request
+        pending = await handle_chat_desktop_request(
+            payload.message, tenant_id=tenant_id,
+            actor_key_id=principal.key_id if principal is not None else None,
+        )
+    except Exception:
+        logger.exception("chat_approval_hook_failed")
+        pending = None
+    if pending is not None:
+        response.pending_approval = pending
+        response.answer = (
+            f"⚠ Approval required: I queued a pending request ({pending.tool}) "
+            f"— approve or reject it in the approval queue ({pending.queue_path}). "
+            f"Nothing runs until a human approves.\n\n{response.answer}"
+        )
+
     # Override the conversation_id with our persisted one
     response.conversation_id = convo_id
 
