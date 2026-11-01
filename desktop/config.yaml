@@ -1,0 +1,39 @@
+# AION Desktop Agent configuration
+# Copy to config.local.yaml for local overrides (git-ignored)
+# Paths are relative to this file's directory (desktop/) or use ~ for home.
+
+app_name: "AION Desktop Agent"
+workspace_dir: "desktop_workspace"
+
+# Allowed directories for file operations (security boundary)
+allowed_dirs:
+  - "~/Desktop"
+  - "desktop_workspace"
+
+# OAuth tokens are stored in ~/.aion/ (never in git)
+oauth_dir: "~/.aion"
+
+# Voice bridge
+voice:
+  stt: "whisper" # "whisper" | "vosk" | "web"
+  tts: "edge" # "edge" | "pyttsx3"
+
+# Browser automation (MVP-2)
+browser:
+  headless: true # Set to false to see the browser open
+  default_path: "http://localhost:3000"
+
+# Desktop control (MVP-2)
+desktop:
+  capture_enabled: true # Enable screen captures
+
+# Logging
+logs:
+  level: "INFO"
+  file: "logs/aion_desktop.log"
+
+# Local agent bridge port. The authentication secret is NOT stored here:
+# it is read from the AION_AGENT_SECRET environment variable only
+# (no --secret CLI flag, to keep it out of shell history).
+agent:
+  port: 8080
