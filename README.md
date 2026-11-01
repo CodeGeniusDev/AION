@@ -39,7 +39,7 @@ AION/
 │       ├── routes/              # API route modules
 │       ├── services/            # Route-facing service layer (some real, some demo — see API routes table)
 │       ├── tools/               # Tool registry/executor + built-in deterministic tools
-│       ├── tests/               # Backend test suite (334 tests)
+│       ├── tests/               # Backend test suite (345 tests)
 │       └── main.py              # FastAPI application entry point
 ├── research/                 # Architecture notes
 ├── docker-compose.yml
@@ -82,18 +82,66 @@ cd apps/api
 pytest
 ```
 
+## Desktop agent bridge (optional)
+
+The local agent (`desktop/`) exposes desktop/browser/file tools over a
+localhost-only HTTP bridge. Single documented run command (also used in
+`docs/DEPLOYMENT.md` and `MVP.sh`):
+
+```bash
+cd desktop
+export AION_AGENT_SECRET='your-secure-secret'   # env only — no --secret CLI flag
+python -m aion_desktop.bridge
+```
+
+The bridge binds to `127.0.0.1:8080` only and refuses to start with an
+empty or `change-me-in-production` secret.
+
+## Human-in-the-loop desktop tool approvals
+
+No protected desktop tool (open app, screenshot, browser navigation, file
+read/write/copy) runs without an explicit human approval, enforced by two
+independent gates:
+
+1. **Backend approval ledger** (`apps/api/memory/approval_store.py`) owns
+   the lifecycle `pending_approval → running → completed/failed` (plus
+   terminal `rejected`/`expired`). A `POST /api/desktop/execute` request
+   only _creates_ a pending approval and a linked task — it never executes.
+   Every state change is an atomic conditional SQL update (guarded by
+   `rowcount`), so an approved action runs **exactly once**: a second
+   approve returns `409`, and the executed parameters are the approved
+   snapshot re-verified by SHA-256 (no approve/execute TOCTOU).
+2. **Bridge one-time grant token** — before execution the backend
+   registers a single-use grant (`approval_id` + tool + SHA-256 token hash
+   - expiry) with the bridge via `POST /approvals/grant`. `/tools/execute`
+     now requires **both** `X-Aion-Secret` and a matching `X-Aion-Approval`
+     grant, which is consumed atomically _before_ the tool runs. A leaked
+     shared secret alone can no longer drive the desktop, and a replayed
+     request is refused (`403 already_consumed`).
+
+The bridge shared secret (`AION_AGENT_SECRET`) stays server-side; it is
+never accepted from or returned to the frontend. An append-only `audit_log`
+records the full lifecycle with secrets/token material redacted. Pending
+approvals surface as alerts and in the approval queue on the tasks page.
+What this does and does not defend against is enumerated in
+`docs/THREAT_MODEL.md`.
+
 ## API routes
 
-| Method | Route | Data source |
-| --- | --- | --- |
-| `GET` | `/` , `/health` | Static |
-| `POST` | `/api/chat` | **Real** — full pipeline: Dynamic Brain Formation → Agents → Cognitive Bus → Immune verification → Cognitive Memory write-back |
-| `GET` | `/api/agents` | **Real** — live Cognitive DNA Agent Registry |
-| `GET` | `/api/tasks`, `/api/tasks/{id}` | **Real** — derived from episodic Cognitive Memory records (no dedicated Task entity exists; this is the closest real data) |
-| `GET` | `/api/memory` | **Real** — live counts from the SQLite-backed Cognitive Memory store |
-| `GET` | `/api/research` | **Real** — Immune-verified semantic memory records tagged as research findings |
-| `GET` | `/api/dashboard` | **Real** — aggregated from the Agent Registry and Cognitive Memory store |
-| `GET` | `/api/workflows` | **Demo data.** No backend "Workflow" entity exists (no reusable workflow templates or execution store) — documented in `routes/workflows.py` rather than faked |
+| Method | Route                                    | Data source                                                                                                                                                    |
+| ------ | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET`  | `/` , `/health`                          | Static                                                                                                                                                         |
+| `POST` | `/api/chat`                              | **Real** — full pipeline: Dynamic Brain Formation → Agents → Cognitive Bus → Immune verification → Cognitive Memory write-back                                 |
+| `GET`  | `/api/agents`                            | **Real** — live Cognitive DNA Agent Registry                                                                                                                   |
+| `GET`  | `/api/tasks`, `/api/tasks/{id}`          | **Real** — derived from episodic Cognitive Memory records (no dedicated Task entity exists; this is the closest real data)                                     |
+| `GET`  | `/api/memory`                            | **Real** — live counts from the SQLite-backed Cognitive Memory store                                                                                           |
+| `GET`  | `/api/research`                          | **Real** — Immune-verified semantic memory records tagged as research findings                                                                                 |
+| `GET`  | `/api/dashboard`                         | **Real** — aggregated from the Agent Registry and Cognitive Memory store                                                                                       |
+| `GET`  | `/api/workflows`                         | **Demo data.** No backend "Workflow" entity exists (no reusable workflow templates or execution store) — documented in `routes/workflows.py` rather than faked |
+| `POST` | `/api/desktop/execute`                   | **Real** — requests a protected desktop action; creates a task + pending approval and never executes (`202`)                                                   |
+| `GET`  | `/api/approvals`, `/api/approvals/{id}`  | **Real** — tenant-scoped approval ledger (sanitized parameters)                                                                                                |
+| `POST` | `/api/approvals/{id}/approve`, `/reject` | **Real** — human decision: approve wins the atomic claim, registers a bridge grant, and dispatches once (`202`/`409`/`410`); reject is terminal (`200`)        |
+| `GET`  | `/api/audit`                             | **Real** — read-only, append-only execution audit trail (secret-free)                                                                                          |
 
 ### Chat orchestration
 
