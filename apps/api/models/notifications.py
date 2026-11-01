@@ -9,7 +9,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-AlertCategory = Literal["task", "agent", "system", "memory"]
+AlertCategory = Literal["task", "agent", "system", "memory", "approval"]
 AlertTone = Literal["info", "success", "warning", "error"]
 
 
