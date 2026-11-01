@@ -21,4 +21,20 @@ test.describe("App smoke tests", () => {
     await page.goto("/settings");
     await expect(page.locator("body")).toBeVisible();
   });
+
+  test("desktop page renders with approval-gated sections", async ({ page }) => {
+    await page.goto("/desktop");
+    await expect(
+      page.getByRole("heading", { name: "Desktop", level: 1 }),
+    ).toBeVisible();
+    // Bridge health strip is always present — online, offline or
+    // unreachable — never a crash, even with the backend down.
+    await expect(
+      page.getByRole("region", { name: "Desktop bridge health" }),
+    ).toBeVisible();
+    // Sidebar entry exists and points at the page.
+    await expect(
+      page.getByRole("link", { name: "Desktop" }).first(),
+    ).toBeVisible();
+  });
 });
