@@ -38,6 +38,21 @@ class UsedAgent(BaseModel):
     summary: str
 
 
+class PendingApprovalInfo(BaseModel):
+    """Public, token-free summary of a chat-created pending approval.
+    The chat path can only ever create pending rows — nothing here
+    grants, executes or exposes approval state beyond what a human can
+    already see in the approval queue."""
+
+    approval_id: str
+    task_id: str
+    tool: str
+    status: Literal["pending_approval"]
+    expires_at: str
+    requires: Literal["human_approval"]
+    queue_path: str
+
+
 class ChatResponse(BaseModel):
     task_id: str
     conversation_id: str
@@ -53,3 +68,6 @@ class ChatResponse(BaseModel):
     error: str | None = None
     development_mode: bool = False
     revision_count: int = Field(default=0, ge=0, le=1)
+    # Phase 2: set when the chat message created a pending desktop
+    # approval. Optional + additive — existing clients ignore it.
+    pending_approval: PendingApprovalInfo | None = None
