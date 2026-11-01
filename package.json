@@ -1,0 +1,8 @@
+{
+  "devDependencies": {
+    "concurrently": "^10.0.6"
+  },
+    "scripts": {
+    "dev": "concurrently -n FRONTEND,BACKEND -c blue,green \"cd apps/web && npm run dev\" \"cd apps/api && ../.venv/bin/python -m uvicorn main:app --reload --port 8000\""
+  }
+}

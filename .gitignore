@@ -14,3 +14,7 @@ __pycache__/
 venv/
 .coverage
 .DS_Store
+
+# Local build artifacts / scratch output
+output/
+MVP_BUILD.log
