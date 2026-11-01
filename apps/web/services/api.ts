@@ -2,6 +2,9 @@ import type {
   AgentsResponse,
   AlertsResponse,
   AppSettings,
+  ApprovalExecuteResponse,
+  ApprovalRecord,
+  ApprovalsResponse,
   ChatRequest,
   ChatResponse,
   ConversationSummary,
@@ -16,7 +19,8 @@ import type {
   WorkflowsResponse,
 } from "@/types";
 
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+export const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 /** Default timeout for GET requests (fast, backend should respond instantly). */
 const DEFAULT_TIMEOUT_MS = 8_000;
@@ -28,22 +32,27 @@ const DEFAULT_TIMEOUT_MS = 8_000;
  */
 const CHAT_TIMEOUT_MS = 120_000;
 
-async function request<T>(path: string, init?: RequestInit & { timeout?: number }): Promise<T> {
+async function request<T>(
+  path: string,
+  init?: RequestInit & { timeout?: number },
+): Promise<T> {
   const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), init?.timeout ?? DEFAULT_TIMEOUT_MS);
-
-  const { timeout: _timeout, ...fetchInit } = init ?? {};
+  const fetchInit = init ?? {};
+  window.setTimeout(
+    () => controller.abort(),
+    fetchInit.timeout ?? DEFAULT_TIMEOUT_MS,
+  );
 
   try {
     const response = await fetch(`${API_URL}${path}`, {
       ...fetchInit,
       signal: controller.signal,
-      headers: { "Content-Type": "application/json", ...fetchInit?.headers },
+      headers: { "Content-Type": "application/json", ...fetchInit.headers },
     });
     if (!response.ok) throw new Error(`AION API returned ${response.status}`);
     return (await response.json()) as T;
   } finally {
-    window.clearTimeout(timeout);
+    window.clearTimeout(fetchInit.timeout);
   }
 }
 
@@ -91,34 +100,57 @@ export function getConversations(): Promise<ConversationSummary[]> {
   return request<ConversationSummary[]>("/api/conversations");
 }
 
-export function getConversationMessages(conversationId: string): Promise<StoredMessage[]> {
-  return request<StoredMessage[]>(`/api/conversations/${conversationId}/messages`);
+export function getConversationMessages(
+  conversationId: string,
+): Promise<StoredMessage[]> {
+  return request<StoredMessage[]>(
+    `/api/conversations/${conversationId}/messages`,
+  );
 }
 
-export function deleteConversation(conversationId: string): Promise<{ deleted: boolean }> {
-  return request<{ deleted: boolean }>(`/api/conversations/${conversationId}`, { method: "DELETE" });
+export function deleteConversation(
+  conversationId: string,
+): Promise<{ deleted: boolean }> {
+  return request<{ deleted: boolean }>(`/api/conversations/${conversationId}`, {
+    method: "DELETE",
+  });
 }
 
 // --- Memory Records ---
 
-export function listMemoryRecords(params?: { memory_type?: string; limit?: number; offset?: number }): Promise<MemoryRecordsResponse> {
+export function listMemoryRecords(params?: {
+  memory_type?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<MemoryRecordsResponse> {
   const search = new URLSearchParams();
   if (params?.memory_type) search.set("memory_type", params.memory_type);
   if (params?.limit) search.set("limit", String(params.limit));
   if (params?.offset) search.set("offset", String(params.offset));
   const qs = search.toString();
-  return request<MemoryRecordsResponse>(`/api/memories/records${qs ? `?${qs}` : ""}`);
+  return request<MemoryRecordsResponse>(
+    `/api/memories/records${qs ? `?${qs}` : ""}`,
+  );
 }
 
-export function searchMemoryRecords(query: string, params?: { memory_type?: string; limit?: number }): Promise<MemoryRecordsResponse> {
+export function searchMemoryRecords(
+  query: string,
+  params?: { memory_type?: string; limit?: number },
+): Promise<MemoryRecordsResponse> {
   const search = new URLSearchParams({ q: query });
   if (params?.memory_type) search.set("memory_type", params.memory_type);
   if (params?.limit) search.set("limit", String(params.limit));
-  return request<MemoryRecordsResponse>(`/api/memories/records/search?${search.toString()}`);
+  return request<MemoryRecordsResponse>(
+    `/api/memories/records/search?${search.toString()}`,
+  );
 }
 
-export function deleteMemoryRecord(memoryId: string): Promise<{ deleted: boolean }> {
-  return request<{ deleted: boolean }>(`/api/memories/records/${memoryId}`, { method: "DELETE" });
+export function deleteMemoryRecord(
+  memoryId: string,
+): Promise<{ deleted: boolean }> {
+  return request<{ deleted: boolean }>(`/api/memories/records/${memoryId}`, {
+    method: "DELETE",
+  });
 }
 
 // --- Task Detail ---
@@ -142,20 +174,34 @@ export function updateSettings(settings: AppSettings): Promise<AppSettings> {
 
 // --- Feedback ---
 
-export function submitFeedback(taskId: string, sentiment: "up" | "down", comment?: string): Promise<{ accepted: boolean }> {
+export function submitFeedback(
+  taskId: string,
+  sentiment: "up" | "down",
+  comment?: string,
+): Promise<{ accepted: boolean }> {
   return request<{ accepted: boolean }>("/api/feedback", {
     method: "POST",
-    body: JSON.stringify({ task_id: taskId, sentiment, comment: comment ?? "" }),
+    body: JSON.stringify({
+      task_id: taskId,
+      sentiment,
+      comment: comment ?? "",
+    }),
   });
 }
 
 // --- Save to Memory ---
 
-export function saveToMemory(content: string, taskId?: string): Promise<{ saved: boolean; memory_id: string }> {
-  return request<{ saved: boolean; memory_id: string }>("/api/memories/save-content", {
-    method: "POST",
-    body: JSON.stringify({ content, task_id: taskId ?? "manual-save" }),
-  });
+export function saveToMemory(
+  content: string,
+  taskId?: string,
+): Promise<{ saved: boolean; memory_id: string }> {
+  return request<{ saved: boolean; memory_id: string }>(
+    "/api/memories/save-content",
+    {
+      method: "POST",
+      body: JSON.stringify({ content, task_id: taskId ?? "manual-save" }),
+    },
+  );
 }
 
 // --- SSE ---
@@ -167,7 +213,10 @@ export function getEventsUrl(taskId: string): string {
 
 // --- Alerts / Notifications ---
 
-export function getAlerts(params?: { unread_only?: boolean; limit?: number }): Promise<AlertsResponse> {
+export function getAlerts(params?: {
+  unread_only?: boolean;
+  limit?: number;
+}): Promise<AlertsResponse> {
   const search = new URLSearchParams();
   if (params?.unread_only) search.set("unread_only", "true");
   if (params?.limit) search.set("limit", String(params.limit));
@@ -175,7 +224,9 @@ export function getAlerts(params?: { unread_only?: boolean; limit?: number }): P
   return request<AlertsResponse>(`/api/alerts${qs ? `?${qs}` : ""}`);
 }
 
-export function markAlertsRead(alertIds: string[]): Promise<{ updated: number }> {
+export function markAlertsRead(
+  alertIds: string[],
+): Promise<{ updated: number }> {
   return request<{ updated: number }>("/api/alerts/mark-read", {
     method: "POST",
     body: JSON.stringify({ alert_ids: alertIds }),
@@ -183,9 +234,53 @@ export function markAlertsRead(alertIds: string[]): Promise<{ updated: number }>
 }
 
 export function markAllAlertsRead(): Promise<{ updated: number }> {
-  return request<{ updated: number }>("/api/alerts/mark-all-read", { method: "POST" });
+  return request<{ updated: number }>("/api/alerts/mark-all-read", {
+    method: "POST",
+  });
 }
 
 export function deleteAlert(alertId: string): Promise<{ deleted: boolean }> {
-  return request<{ deleted: boolean }>(`/api/alerts/${alertId}`, { method: "DELETE" });
+  return request<{ deleted: boolean }>(`/api/alerts/${alertId}`, {
+    method: "DELETE",
+  });
+}
+
+// --- Desktop tool approvals (human-in-the-loop) ---
+
+/** Request a desktop tool execution. Creates a pending approval —
+ * nothing runs until a human approves it via approveAction(). */
+export function requestDesktopExecution(payload: {
+  tool: string;
+  parameters: Record<string, unknown>;
+  title?: string;
+  task_id?: string;
+}): Promise<ApprovalExecuteResponse> {
+  return request<ApprovalExecuteResponse>("/api/desktop/execute", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getPendingApprovals(): Promise<ApprovalsResponse> {
+  return request<ApprovalsResponse>("/api/approvals?status=pending_approval");
+}
+
+/** Explicit human approval — the backend claims the request exactly once
+ * and dispatches it under a one-time grant. 409 = already decided. */
+export function approveAction(
+  approvalId: string,
+): Promise<ApprovalExecuteResponse> {
+  return request<ApprovalExecuteResponse>(
+    `/api/approvals/${approvalId}/approve`,
+    {
+      method: "POST",
+    },
+  );
+}
+
+/** Reject a pending action. Terminal: it can never execute afterwards. */
+export function rejectAction(approvalId: string): Promise<ApprovalRecord> {
+  return request<ApprovalRecord>(`/api/approvals/${approvalId}/reject`, {
+    method: "POST",
+  });
 }

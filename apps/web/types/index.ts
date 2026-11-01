@@ -1,4 +1,9 @@
-export type TaskStatus = "completed" | "running" | "failed";
+export type TaskStatus =
+  | "completed"
+  | "running"
+  | "failed"
+  | "pending"
+  | "pending_approval";
 export type AgentState = "online" | "standby" | "offline";
 
 export interface RecentTask {
@@ -114,7 +119,10 @@ export interface MemoryResponse {
   policies: string[];
 }
 
-export type ResearchNoteType = "Architecture note" | "Experiment" | "Working draft";
+export type ResearchNoteType =
+  | "Architecture note"
+  | "Experiment"
+  | "Working draft";
 
 export interface ResearchNote {
   id: string;
@@ -190,6 +198,15 @@ export interface TaskDetail {
   status: TaskStatus;
   confidence: number;
   created: string;
+  output?: {
+    tool_id: string;
+    task_id: string;
+    success: boolean;
+    content?: string;
+    error?: string;
+    data?: Record<string, unknown>;
+  };
+  updated?: string;
 }
 
 // --- Settings ---
@@ -208,7 +225,7 @@ export interface AppSettings {
 
 // --- Alerts / Notifications ---
 
-export type AlertCategory = "task" | "agent" | "system" | "memory";
+export type AlertCategory = "task" | "agent" | "system" | "memory" | "approval";
 export type AlertTone = "info" | "success" | "warning" | "error";
 
 export interface AlertItem {
@@ -225,4 +242,61 @@ export interface AlertsResponse {
   items: AlertItem[];
   total: number;
   unread_count: number;
+}
+
+// --- Desktop tool approvals (human-in-the-loop) ---
+
+export type ApprovalStatus =
+  | "pending_approval"
+  | "approved"
+  | "running"
+  | "completed"
+  | "failed"
+  | "rejected"
+  | "expired";
+
+/** API-facing approval record. Parameters are sanitized server-side:
+ * secret-like keys and file content never reach the browser. */
+export interface ApprovalRecord {
+  id: string;
+  task_id: string;
+  tool: string;
+  parameters: Record<string, unknown>;
+  status: ApprovalStatus;
+  created_at: string;
+  expires_at: string;
+  approved_at?: string | null;
+  approved_by_key_id?: string | null;
+  claimed_at?: string | null;
+  completed_at?: string | null;
+  error?: string | null;
+}
+
+export interface ApprovalsResponse {
+  items: ApprovalRecord[];
+  total: number;
+}
+
+/** 202 envelope from POST /api/desktop/execute and .../approve. */
+export interface ApprovalExecuteResponse {
+  approval_id: string;
+  task_id: string;
+  status: ApprovalStatus;
+  expires_at: string;
+  requires: string;
+}
+
+export interface AuditEvent {
+  seq: number;
+  ts: string;
+  event: string;
+  approval_id: string;
+  task_id?: string | null;
+  actor_key_id?: string | null;
+  detail?: string | null;
+}
+
+export interface AuditResponse {
+  items: AuditEvent[];
+  total: number;
 }
