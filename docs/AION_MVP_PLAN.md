@@ -32,12 +32,13 @@ The fix is not a rewrite. It is a **glue layer**: a local Python agent (in the s
 | Agent routing       | Cognitive DNA registry + AgentRouter + DynamicBrainFormer                                            |
 | Message bus         | CognitiveBus (in-process pub/sub, task-scoped)                                                       |
 | Memory              | SQLite-backed Cognitive Memory (real persistent store)                                               |
+| Workflows           | SQLite-backed Workflow entity; create + run via WorkflowRunner (manual mode, model-safe agents)      |
 | Tools               | Calculator (safe AST eval), text_analysis, current_datetime, memory/knowledge providers              |
 | Chat pipeline       | Dynamic Brain Formation → Agents → Cognitive Bus → Immune verification → Memory write-back           |
 | Auth                | Opt-in API-key auth (`AION_REQUIRE_AUTH`), tenant resolution                                         |
 | Rate limiting       | Per-IP + per-key rate limiter                                                                        |
 | Observability       | Request ID/correlation IDs, structured logging, metrics                                              |
-| Testing             | 372 backend tests + 9 desktop bridge tests + Playwright e2e smoke test                              |
+| Testing             | 394 backend tests + 9 desktop bridge tests + Playwright e2e smoke test                              |
 | Docker              | Compose for web + api                                                                                |
 | UI / responsiveness | Tailwind + Radix primitives; layout is mobile-responsive already (sidebar, top nav, responsive grid) |
 
@@ -45,7 +46,6 @@ The fix is not a rewrite. It is a **glue layer**: a local Python agent (in the s
 
 | Area                  | Status                                                         |
 | --------------------- | -------------------------------------------------------------- |
-| `/api/workflows`      | Demo data only. No Workflow entity in DB.                      |
 | External web research | Only static test corpus + internal memory. No live web source. |
 | Voice assistant       | No STT/TTS module.                                             |
 | Desktop automation    | No tools exist yet.                                            |
@@ -228,7 +228,7 @@ AION/
 
 ### 30 Days — MVP-1 + MVP-2 (desktop automation)
 
-- [ ] WorkflowRunner + tasks table + local tool registry
+- [x] WorkflowRunner + tasks table + local tool registry
 - [ ] Browser control in Playwright
 - [ ] Desktop control in PyAutoGUI
 - [ ] File ops

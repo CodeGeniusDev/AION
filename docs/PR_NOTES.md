@@ -32,3 +32,21 @@ so conflicts can be checked before merge.
 ### Phase 0 — Cleanup
 - No `apps/api` source changes (verified existing suites: 372 backend tests
   pass). Changes were in `MVP.sh`, `desktop/`, and docs only.
+
+### Phase 1 — Real Workflow entity
+- `apps/api/config.py` — new `workflow_db_path` setting
+  (`AION_WORKFLOW_DB_PATH`)
+- `apps/api/.env.example` — `AION_WORKFLOW_DB_PATH` placeholder
+- `apps/api/models/workflows.py` — added `WorkflowCreateRequest`,
+  `WorkflowRunRequest`, `WorkflowRunResult`, `WorkflowRunResponse`
+  (backward compatible; existing `Workflow` shape unchanged)
+- `apps/api/routes/workflows.py` — real endpoints: `GET /api/workflows`,
+  `GET /api/workflows/{id}`, `POST /api/workflows`,
+  `POST /api/workflows/{id}/run`
+- `apps/api/services/workflows_service.py` — demo dict replaced with
+  store-backed service + model-safe agent whitelist
+- `apps/api/memory/workflow_store.py` — new SQLite store (schema,
+  seed-once, atomic `claim_for_run`)
+- `apps/api/tests/test_workflows.py` — 22 new tests
+- Frontend only (no contract changes): `types/index.ts`, `services/api.ts`,
+  `components/workflows/workflows-view.tsx`
