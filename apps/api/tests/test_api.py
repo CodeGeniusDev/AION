@@ -77,6 +77,10 @@ def test_agents_returns_four_specialists() -> None:
 
 
 def test_tasks_returns_demo_tasks() -> None:
+    """Tasks are derived from real episodic Cognitive Memory records.
+    Create a chat request first to seed episodic memory, then verify tasks.
+    """
+    client.post("/api/chat", json={"message": "Create a roadmap and steps for launch"})
     response = client.get("/api/tasks")
     body = response.json()
     assert response.status_code == 200
