@@ -39,6 +39,10 @@ class Settings:
     # (e.g. "/data/aion_memory.db") for durability across process restarts.
     # Docker Compose mounts a volume at /data by default.
     memory_db_path: str = os.getenv("AION_MEMORY_DB_PATH", "")
+    # SQLite file path for the Workflow entity store (Phase 1). Empty keeps
+    # workflows in in-memory SQLite (seeded fresh, lost on restart); set a
+    # real path for durable, user-created workflows across restarts.
+    workflow_db_path: str = os.getenv("AION_WORKFLOW_DB_PATH", "")
     # --- Human-in-the-loop desktop tool approvals ---------------------
     # Approval ledger + audit log SQLite path. Empty keeps the ledger
     # in-memory (hermetic tests); deployments set a real file path.
