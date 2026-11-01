@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   Bot,
   Check,
@@ -8,11 +9,13 @@ import {
   Copy,
   Database,
   RefreshCw,
+  ShieldCheck,
   ThumbsDown,
   ThumbsUp,
 } from "lucide-react";
 import { saveToMemory, submitFeedback } from "@/services/api";
 import type { ChatResponse } from "@/types";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/cn";
 
 const shortNames: Record<string, string> = {
@@ -51,6 +54,14 @@ export function AionMessage({
   const [copied, setCopied] = useState(false);
   const [reaction, setReaction] = useState<"up" | "down" | null>(null);
   const [saved, setSaved] = useState(false);
+  const pending = response.pending_approval ?? null;
+  // The backend prefixes the answer with a plain-text notice so every
+  // consumer sees it. When we render the structured card we drop that
+  // first notice paragraph to avoid showing the same thing twice.
+  const displayAnswer =
+    pending && response.answer.startsWith("⚠ Approval required:")
+      ? response.answer.slice(response.answer.indexOf("\n\n") + 2)
+      : response.answer;
   const agentLine = response.used_agents
     .map((agent) => shortNames[agent.id])
     .join(" • ");
@@ -97,7 +108,29 @@ export function AionMessage({
         {agentLine && (
           <p className="mb-2 text-[10px] text-muted-text">{agentLine}</p>
         )}
-        <p className="whitespace-pre-wrap">{response.answer}</p>
+        {pending && (
+          <div className="mb-3 rounded-[14px] border border-[#e2d4ad] bg-[#fff8e6] p-3">
+            <div className="flex items-start gap-2">
+              <ShieldCheck className="mt-0.5 size-4 shrink-0 text-[#8b6a16]" />
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-semibold text-[#8b6a16]">
+                  Approval pending — nothing has run
+                </p>
+                <p className="mt-0.5 text-[10px] leading-5 text-[#8b6a16]/90">
+                  “{pending.tool}” is waiting for your decision. It expires at{" "}
+                  {new Date(pending.expires_at).toLocaleTimeString()}.
+                </p>
+                <Link href={pending.queue_path} className="mt-2 inline-block">
+                  <Button size="sm" variant="outline" className="h-8 gap-1.5 text-[10px]">
+                    Review in queue
+                    <ChevronDown className="size-3.5 -rotate-90" />
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+        <p className="whitespace-pre-wrap">{displayAnswer}</p>
         {response.sources.length > 0 && (
           <div className="mt-3 rounded-[12px] border border-[#dce2ea] bg-white/70 p-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-text">

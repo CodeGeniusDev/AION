@@ -49,6 +49,16 @@ export interface ChatRequest {
   verification_enabled: boolean;
 }
 
+export interface PendingApprovalInfo {
+  approval_id: string;
+  task_id: string;
+  tool: string;
+  status: "pending_approval";
+  expires_at: string;
+  requires: "human_approval";
+  queue_path: string;
+}
+
 export interface ChatResponse {
   task_id: string;
   conversation_id: string;
@@ -64,6 +74,9 @@ export interface ChatResponse {
   error: string | null;
   development_mode: boolean;
   revision_count: number;
+  // Phase 2: present when the message queued a pending desktop approval.
+  // Optional so reconstructed history (no live approval) stays type-safe.
+  pending_approval?: PendingApprovalInfo | null;
 }
 
 export type ChatMessage =
