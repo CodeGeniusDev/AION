@@ -49,7 +49,22 @@ print_info()    { echo -e "${BLUE}[•]${NC} $1"; }
 print_header()  { echo ""; echo -e "${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"; echo -e "${CYAN}║${NC}  ${1}"; echo -e "${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"; echo ""; }
 
 log_file() {
+  # Dry runs must create/modify nothing — MVP_BUILD.log included.
+  if [ "${DRY_RUN}" = true ]; then return 0; fi
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "${REPO_DIR}/MVP_BUILD.log"
+}
+
+# Activate the repo virtualenv BEFORE any pip install (prevents installing
+# into system Python). Exits with guidance when the venv is missing.
+ensure_venv() {
+  if [ ! -f "${REPO_DIR}/.venv/bin/activate" ]; then
+    print_error "Python virtual environment not found at ${REPO_DIR}/.venv"
+    print_info "Create it with: python3 -m venv .venv && .venv/bin/pip install -r apps/api/requirements.txt"
+    exit 1
+  fi
+  # shellcheck source=/dev/null
+  source "${REPO_DIR}/.venv/bin/activate"
+  print_status "Activated .venv (python3 -> $(command -v python3))"
 }
 
 # ---- Step 1: Check prerequisites ----------------------------------------------------
@@ -119,6 +134,11 @@ ask_build_order() {
 create_structure() {
   print_header "Step 3/7 — Creating project structure"
 
+  if [ "${DRY_RUN}" = true ]; then
+    print_info "[dry-run] would run: mkdir -p desktop/{aion_desktop/{tools,schemas},desktop_workspace,logs,scripts} docs/"
+    return 0
+  fi
+
   # desktop/ agent
   mkdir -p "${DESKTOP_DIR}/aion_desktop"
   mkdir -p "${DESKTOP_DIR}/aion_desktop/tools"
@@ -150,6 +170,11 @@ install_dependencies() {
   print_header "Step 4/7 — Installing dependencies"
 
   local mode="${1}"
+
+  # pip must land in the repo venv, never system Python.
+  if [ "${mode}" != "node-only" ]; then
+    ensure_venv
+  fi
 
   if [ "${mode}" = "python-only" ]; then
     print_status "Installing Python dependencies (audio/video tools may take a while)"
@@ -183,18 +208,27 @@ install_dependencies() {
 create_config_files() {
   print_header "Step 5/7 — Creating configuration files"
 
-  # desktop/config.yaml
-  cat > "${DESKTOP_DIR}/config.yaml" << EOF
+  if [ "${DRY_RUN}" = true ]; then
+    print_info "[dry-run] would create desktop/config.yaml (only if missing) and desktop/.env.example (only if missing)"
+    return 0
+  fi
+
+  # desktop/config.yaml — never overwrite an existing (possibly edited) config.
+  if [ -f "${DESKTOP_DIR}/config.yaml" ]; then
+    print_warn "desktop/config.yaml already exists — keeping it (not overwriting)."
+  else
+    # Paths are relative to desktop/ (or ~) — resolved by aion_desktop/config.py.
+    cat > "${DESKTOP_DIR}/config.yaml" << EOF
 # AION Desktop Agent configuration
 # Copy to config.local.yaml for local overrides (git-ignored)
 
 app_name: "AION Desktop Agent"
-workspace_dir: "${DESKTOP_DIR}/desktop_workspace"
+workspace_dir: "desktop_workspace"
 
 # Allowed directories for file operations (security boundary)
 allowed_dirs:
   - "~/Desktop"
-  - "${DESKTOP_DIR}/desktop_workspace"
+  - "desktop_workspace"
 
 # OAuth tokens are stored in ~/.aion/ (never in git)
 oauth_dir: "~/.aion"
@@ -216,7 +250,7 @@ desktop:
 # Logging
 logs:
   level: "INFO"
-  file: "${DESKTOP_DIR}/logs/aion_desktop.log"
+  file: "logs/aion_desktop.log"
 
 # Local agent bridge port. The secret is NOT stored in this file:
 # it is read from the AION_AGENT_SECRET environment variable only
@@ -224,19 +258,22 @@ logs:
 agent:
   port: 8080
 EOF
+    print_status "Created ${DESKTOP_DIR}/config.yaml"
+  fi
 
-  # desktop/.env.example
-  cat > "${DESKTOP_DIR}/.env.example" << 'EOF'
+  # desktop/.env.example — also keep-if-present
+  if [ -f "${DESKTOP_DIR}/.env.example" ]; then
+    print_warn "desktop/.env.example already exists — keeping it."
+  else
+    cat > "${DESKTOP_DIR}/.env.example" << 'EOF'
 # Copy to .env and fill in real values (git-ignored)
 # AION_AGENT_SECRET must be a real secret — the bridge refuses to start
 # with an empty or "change-me-in-production" value.
 AION_AGENT_PORT=8080
 AION_AGENT_SECRET=change-me-in-production
 EOF
-
-  print_status "Created:"
-  echo "  ${DESKTOP_DIR}/config.yaml"
-  echo "  ${DESKTOP_DIR}/.env.example"
+    print_status "Created ${DESKTOP_DIR}/.env.example"
+  fi
 
   log_file "Created config files"
 }
@@ -245,17 +282,16 @@ EOF
 start_servers() {
   print_header "Step 6/7 — Starting servers"
 
-  # Check for .venv
-  if [ ! -d "${REPO_DIR}/.venv" ]; then
-    print_error "Python virtual environment not found at ${REPO_DIR}/.venv"
-    print_info "Create it with: python3 -m venv ${REPO_DIR}/.venv"
-    exit 1
+  if [ "${MOCK_SERVERS}" = true ]; then
+    print_info "MOCK SERVERS mode: NOT starting uvicorn / next dev — servers are skipped."
+    print_info "To actually start them, run without --mock-servers (or: npm run dev at the repo root)."
+    return 0
   fi
+
+  ensure_venv
 
   print_warn "Starting backend (FastAPI, port ${BACKEND_PORT})..."
   cd "${AION_DIR}/apps/api"
-  # shellcheck source=/dev/null
-  source "${REPO_DIR}/.venv/bin/activate"
   uvicorn main:app --reload --port "${BACKEND_PORT}" &
   BACKEND_PID=$!
   echo "${BACKEND_PID}" > "${REPO_DIR}/.backend.pid"
@@ -293,11 +329,14 @@ show_test_cases() {
   echo ""
   echo "  1. Open http://localhost:3000/dashboard"
   echo "  2. Open http://localhost:8000/docs"
-  echo "  3. From AION Chat, type:"
-  echo "     'open Chrome, go to google.com, search for AION AI, take a screenshot'"
-  echo "  4. Check the Tasks and Desktop tabs in the dashboard"
+  echo "  3. Desktop actions go through the human approval queue (no auto-execution):"
+  echo "       curl -X POST http://localhost:8000/api/desktop/execute \\"
+  echo "         -H 'Content-Type: application/json' \\"
+  echo "         -d '{\"tool\":\"file_write\",\"parameters\":{\"path\":\"desktop_workspace/hello.txt\",\"content\":\"hi\"}}'"
+  echo "     then Approve it on the Tasks page (or POST /api/approvals/{id}/approve)."
+  echo "  4. Check the Tasks page for the approval queue and task history."
   echo ""
-  echo "You should see the browser open (or screenshot saved) and a task in the tasks panel."
+  print_info "Chat-driven desktop requests (chat -> pending approval) are planned, not built yet."
   echo ""
   print_info "MVP is now running. Next steps:"
   echo "  - Read docs/AION_MVP_PLAN.md for the full roadmap"
@@ -399,11 +438,4 @@ main() {
   echo ""
 }
 
-# Run the script without a TTY: read from stdin if interactive
-if [[ ! -t 0 ]]; then
-  # Non-interactive: just run everything
-  main
-else
-  # Interactive: run the menu
-  main
-fi
+main "$@"
