@@ -16,6 +16,9 @@ import type {
   StoredMessage,
   TaskDetail,
   TasksResponse,
+  WorkflowCreatePayload,
+  WorkflowData,
+  WorkflowRunResponse,
   WorkflowsResponse,
 } from "@/types";
 
@@ -82,6 +85,23 @@ export function getMemory(): Promise<MemoryResponse> {
 
 export function getWorkflows(): Promise<WorkflowsResponse> {
   return request<WorkflowsResponse>("/api/workflows");
+}
+
+export function createWorkflow(payload: WorkflowCreatePayload): Promise<WorkflowData> {
+  return request<WorkflowData>("/api/workflows", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+/** Runs a workflow through the real WorkflowRunner (manual mode). Live agent
+ * runs can take as long as a chat request, so it uses the long chat timeout. */
+export function runWorkflow(id: string, input: string): Promise<WorkflowRunResponse> {
+  return request<WorkflowRunResponse>(`/api/workflows/${encodeURIComponent(id)}/run`, {
+    method: "POST",
+    body: JSON.stringify({ input }),
+    timeout: CHAT_TIMEOUT_MS,
+  });
 }
 
 export function getResearch(): Promise<ResearchResponse> {

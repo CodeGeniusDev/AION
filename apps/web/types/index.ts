@@ -103,6 +103,26 @@ export interface WorkflowsResponse {
   total: number;
 }
 
+export interface WorkflowCreatePayload {
+  name: string;
+  description: string;
+  agents: string[];
+}
+
+export interface WorkflowRunResult {
+  task_id: string;
+  status: string;
+  answer: string;
+  confidence: number;
+  processing_time_ms: number;
+  error: string | null;
+}
+
+export interface WorkflowRunResponse {
+  workflow: WorkflowData;
+  run: WorkflowRunResult;
+}
+
 export type MemoryType = "short_term" | "long_term" | "vector";
 
 export interface MemoryCategory {
