@@ -111,8 +111,10 @@ STT_MODEL_SIZE=small
 1. Start backend (port 8000)
 2. Start frontend (port 3000)
 3. Start local agent bridge (port 8080): `cd desktop && export AION_AGENT_SECRET='your-secure-secret' && python -m aion_desktop.bridge`
-4. Open dashboard → Chat / Tasks / Desktop tabs
-5. Send a message like: `"open Chrome, go to google.com, search for 'AION AI', take a screenshot, save to desktop"`
+4. Open dashboard → Chat / Tasks (a dedicated Desktop tab is planned, not built yet)
+5. Request a desktop action through the approval API, e.g.:
+   `curl -X POST http://localhost:8000/api/desktop/execute -H 'Content-Type: application/json' -d '{"tool":"file_write","parameters":{"path":"desktop_workspace/hello.txt","content":"hi"}}'`
+   — chat-driven desktop control (chat message → pending approval) is planned, not built yet
 6. Protected desktop actions enter the **approval queue** (tasks page) and
    raise an alert; nothing runs until you click **Approve**. An approved
    action executes exactly once under a one-time bridge grant; **Reject**

@@ -15,7 +15,7 @@
 - `--mock-servers` is parsed but never used → make `start_servers` actually skip
   launching uvicorn/npm when set (and say so).
 - Never overwrite an existing `desktop/config.yaml` (warn + keep).
-- Generated config must use relative paths / `~` — not absolute `/Users/...`.
+- Generated config must use relative paths / `~` — not absolute home-directory paths.
 - Remove the chat-driven desktop-control demo prompt ("type 'open Chrome…'")
   until Phase 2 ships.
 - Checks: `bash -n`, shellcheck (via `shellcheck-py` in `.venv`), real `--dry-run`

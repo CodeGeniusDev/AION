@@ -37,7 +37,7 @@ The fix is not a rewrite. It is a **glue layer**: a local Python agent (in the s
 | Auth                | Opt-in API-key auth (`AION_REQUIRE_AUTH`), tenant resolution                                         |
 | Rate limiting       | Per-IP + per-key rate limiter                                                                        |
 | Observability       | Request ID/correlation IDs, structured logging, metrics                                              |
-| Testing             | 345 backend tests + Playwright e2e smoke test                                                        |
+| Testing             | 372 backend tests + 9 desktop bridge tests + Playwright e2e smoke test                              |
 | Docker              | Compose for web + api                                                                                |
 | UI / responsiveness | Tailwind + Radix primitives; layout is mobile-responsive already (sidebar, top nav, responsive grid) |
 
@@ -90,7 +90,7 @@ AION is the **brain**. The lower layer is the **hands**: tools that actually do 
 - [x] Verify AION runs end-to-end (backend + frontend + chat)
 - [x] Add a persistent `tasks` table + `task_status` flow (pending → running → completed/failed)
 - [x] Add a `local_tools` registry mapping tool names → Python scripts / functions
-- [x] Wire `execute_tool(tool_name, params)` into the chat flow
+- [ ] Wire `execute_tool(tool_name, params)` into the chat flow (planned — chat must only be able to *create* a pending approval for protected desktop tools, never approve or execute; not built yet)
 - [ ] Add a simple "Desktop" tab in the dashboard showing active tasks (planned)
 
 ### MVP-2 — Desktop automation (highest "wow")
