@@ -205,3 +205,58 @@ or the approval ledger (test with an exploding bridge client proves it).
 - Live E2E (raw output in report): status contract, real synthesis
   (33 KB MPEG layer III), dictated chat → pending → reject → no file,
   logs free of dictated content and secrets
+
+## Phase 7 — Social via official APIs (scaffolding, dry-run only)
+
+Plan: `docs/plans/phase7.md`. Design: provider interfaces + OAuth2
+state/PKCE scaffolding + 0600 token vault + `social_post` as a protected,
+approval-gated tool that performs **zero network I/O** by default. Real
+posting is explicitly out of this session (owner credentials + app review).
+
+- `desktop/aion_desktop/social/oauth.py` (NEW) — RFC 7636 S256 PKCE,
+  single-use state, authorize-URL builder, `TokenVault` (0600 from first
+  byte, refuses symlinks and group/world-readable files, relative paths
+  anchored to home; `TokenSet.__repr__` redacted so tokens can't leak via
+  logs)
+- `desktop/aion_desktop/social/providers.py` (NEW) — `SocialProvider`
+  interface + Facebook Page / Instagram / Pinterest / TikTok specs, each
+  pointing only at its documented official endpoint. `dry_run()` returns a
+  secret-free request preview + real credential state; `post_live()` is the
+  single network seam, reachable only when config
+  `social.live_enabled` AND client-secret env AND a vault token are ALL
+  true — and only ever after the human approval gate
+- `desktop/aion_desktop/bridge.py` — `social_post` executor; live mode is
+  THIS machine's config (same "config decides, never the request" policy as
+  browser headlessness and voice backends)
+- `desktop/config.yaml` + `desktop/.env.example` +
+  `desktop/aion_desktop/config.py` — `social.live_enabled: false` default,
+  `oauth_dir: ~/.aion`, official credential env placeholders
+  (`AION_SOCIAL_META_*`, `AION_SOCIAL_PINTEREST_*`, `AION_SOCIAL_TIKTOK_*`)
+- `apps/api/config.py` + `apps/api/.env.example` — `social_post` added to
+  the default protected-tool set
+- `apps/api/services/chat_approval.py` — `social_post` param whitelist
+  (platform/content/media_url only; `live`, tokens, secrets are not
+  whitelisted keys and are dropped) + imperative-clause heuristic
+  ("Post \"text\" to facebook"); LLM classifier picks it up automatically
+  through the same whitelist
+- `fix(desktop)` 6d83f31: corrected pre-existing hard pins of
+  openai-whisper/edge-tts in `desktop/requirements.txt` — they are optional
+  (Phase 6 documentation was already correct; the file was not)
+- Tests: `desktop/tests/test_social.py` (NEW, 16 — PKCE vector, vault
+  permissions, dry-run previews, spoofed `live` param inert, socket-blocked
+  zero-network proof) + `apps/api/tests/test_chat_approvals.py` (+10 —
+  detection, ignore-list, param dropping, create-only endpoint). Backend
+  446 → 456, desktop 47 → 63. Gemini declarations still exactly
+  calculator/text_analysis/current_datetime (existing test re-passes)
+- Live E2E: chat → pending `social_post` → injection tail stayed a pending
+  row with params `{platform, content(redacted)}` → approve → bridge
+  executed in 0.1 ms dry-run (no network), audit
+  requested(params_hash,protected=True)→approved→claimed→granted→executed,
+  `~/.aion` never created, 0 secret/token matches in both server logs
+- OWNER TODO for live posting (nothing works without these): Meta
+  developer app (FB Page + `pages_manage_posts`; IG needs Business account
+  + reviewed `instagram_content_publish` + `AION_SOCIAL_IG_USER_ID`),
+  Pinterest developer app (`pins:write`, `board_access`, board id), TikTok
+  Content Posting API **app review** for public direct posts. Then set the
+  env credentials, complete the OAuth exchange into `~/.aion`, and flip
+  `social.live_enabled: true` deliberately.

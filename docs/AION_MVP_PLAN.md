@@ -12,8 +12,8 @@
 
 AION right now is a **smart AI command center**: agents talk to each other, verify each other's output, remember things, and handle chat/agents/tasks/memory. But it has three gaps:
 
-1. **Partial desktop control** — file operations and app launches now run through the approval-gated local bridge (chat → pending approval → human approves → executes once), and scheduled desktop actions fire as pending approvals at their time (Phase 5), but browser clicking and social posting are not built yet.
-2. **No social automation** — TikTok, Pinterest, and Facebook are manual today.
+1. **Partial desktop control** — file operations and app launches now run through the approval-gated local bridge (chat → pending approval → human approves → executes once), and scheduled desktop actions fire as pending approvals at their time (Phase 5), but browser clicking/typing is not built yet.
+2. **Social: scaffolding only** — `social_post` is a protected, approval-gated tool with official-API providers (Meta Graph, Pinterest v5, TikTok Content Posting) and OAuth2 PKCE + a 0600 token vault (Phase 7), but it runs **dry-run only**; real posting awaits owner-supplied developer apps and credentials. TikTok, Pinterest, and Facebook remain manual today.
 3. **Partial voice assistant** — chat now accepts browser dictation (Web Speech API) and replies can be spoken through an optional edge-tts endpoint (Phase 6); local-model STT (whisper/vosk) and wake-word remain unbuilt.
 
 The fix is not a rewrite. It is a **glue layer**: a local Python agent (in the same repo) that AION's tool system calls. AION stays the brain; this layer is the hands, eyes, and voice.
@@ -38,7 +38,7 @@ The fix is not a rewrite. It is a **glue layer**: a local Python agent (in the s
 | Auth                | Opt-in API-key auth (`AION_REQUIRE_AUTH`), tenant resolution                                         |
 | Rate limiting       | Per-IP + per-key rate limiter                                                                        |
 | Observability       | Request ID/correlation IDs, structured logging, metrics                                              |
-| Testing             | 446 backend tests + 47 desktop bridge/browser/voice tests + 5 Playwright e2e smoke tests                           |
+| Testing             | 456 backend tests + 63 desktop bridge/browser/voice/social tests + 5 Playwright e2e smoke tests                           |
 | Docker              | Compose for web + api                                                                                |
 | UI / responsiveness | Tailwind + Radix primitives; layout is mobile-responsive already (sidebar, top nav, responsive grid) |
 
@@ -49,7 +49,7 @@ The fix is not a rewrite. It is a **glue layer**: a local Python agent (in the s
 | External web research | Only static test corpus + internal memory. No live web source. |
 | Voice assistant       | Browser dictation into chat + optional server TTS (`/api/voice/*`); no local-model STT.           |
 | Desktop automation    | Approval-gated bridge tools ship (files, apps, screenshots, browser navigate) — PyAutoGUI-grade input not yet. |
-| Social media tools    | No tools exist yet.                                            |
+| Social media tools    | Approval-gated `social_post` scaffolding ships (dry-run, official APIs only) — live posting planned, needs owner credentials. |
 
 ### What AION has not built yet (capability gaps, not impossibilities)
 
@@ -114,10 +114,11 @@ AION is the **brain**. The lower layer is the **hands**: tools that actually do 
 Posting to social accounts **is possible via official APIs** — it is not impossible,
 just not built yet and gated on owner-supplied credentials and app review:
 
-- [ ] Facebook / Instagram: Meta Graph API for Pages (OAuth2)
-- [ ] TikTok: TikTok Content Posting API (restricted, needs developer app review)
-- [ ] Pinterest: Pinterest API (check ToS for the intended posting flow)
-- [ ] `social_post(platform, payload)` tool
+- [x] `social_post(platform, content, media_url?)` — protected, approval-gated tool with dry-run mode against the four official platforms (Phase 7); request parameters can never flip live mode
+- [x] OAuth2 flow scaffolding: state + PKCE S256 builders, token vault at `~/.aion` with 0600 and symlink/permission refusal (no network exchange without credentials)
+- [ ] Facebook / Instagram: Meta Graph API for Pages (OAuth2) — needs Meta app, Page access token, `pages_manage_posts` / reviewed `instagram_content_publish`
+- [ ] TikTok: TikTok Content Posting API (restricted, needs developer app review before public direct posting)
+- [ ] Pinterest: Pinterest API v5 (developer app + `pins:write`/`board_access` partner approval)
 - [ ] `business_schedule(platform, post, time)` scheduler
 
 ### MVP-4 — Voice assistant
@@ -241,8 +242,8 @@ AION/
 
 ### 60 Days — MVP-3 (social media)
 
-- [ ] OAuth flows for Facebook, Instagram, TikTok, Pinterest
-- [ ] `social_post` tool
+- [x] OAuth flow scaffolding (state/PKCE + token vault) for Facebook, Instagram, TikTok, Pinterest — live exchange needs owner credentials
+- [x] `social_post` tool (approval-gated, dry-run only)
 - [ ] `business_schedule` tool
 - [ ] Scheduler background service
 - [ ] Notifications and alerts
@@ -259,7 +260,7 @@ AION/
 
 ## 10. WHAT WE WILL NOT BUILD IN THIS MVP
 
-- Posting to live social accounts — planned, not impossible: requires official developer apps + OAuth credentials from the owner (Meta Graph API, Pinterest API, TikTok Content Posting API after app review). Deferred until credentials exist.
+- Live posting to real social accounts — planned, not impossible: the scaffolding (provider interfaces, OAuth2 state/PKCE, 0600 token vault, approval-gated dry-run `social_post`) shipped in Phase 7; going live requires official developer apps + OAuth credentials from the owner (Meta Graph API, Pinterest API, TikTok Content Posting API after app review) and `social.live_enabled: true` on the desktop machine.
 - Full desktop OS-level access (security risk; we scope to allowlisted paths)
 - Sending emails automatically
 - Multi-account social management
