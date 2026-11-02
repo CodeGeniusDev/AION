@@ -95,6 +95,13 @@ from services.schedule_runner import start_scheduler_if_enabled  # noqa: E402
 
 start_scheduler_if_enabled()
 
+# Phase B startup safety: logs a WARNING when AION_REQUIRE_AUTH is off and
+# the desktop bridge is reachable. Log-only — never blocks or changes
+# request handling.
+from services.startup_guard import check_startup_safety  # noqa: E402
+
+check_startup_safety()
+
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(_: Request, exc: Exception) -> JSONResponse:
