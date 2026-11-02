@@ -43,6 +43,13 @@ class Settings:
     # workflows in in-memory SQLite (seeded fresh, lost on restart); set a
     # real path for durable, user-created workflows across restarts.
     workflow_db_path: str = os.getenv("AION_WORKFLOW_DB_PATH", "")
+    # SQLite file path for the Schedule store (Phase 5). Empty keeps
+    # schedules in in-memory SQLite (lost on restart); set a real path
+    # for schedules that survive deployments. The schedule runner is
+    # opt-in: 1 starts the background tick thread (fires create PENDING
+    # approvals, never execute).
+    schedule_db_path: str = os.getenv("AION_SCHEDULE_DB_PATH", "")
+    scheduler_enabled: bool = os.getenv("AION_SCHEDULER_ENABLED", "0") == "1"
     # --- Human-in-the-loop desktop tool approvals ---------------------
     # Approval ledger + audit log SQLite path. Empty keeps the ledger
     # in-memory (hermetic tests); deployments set a real file path.
