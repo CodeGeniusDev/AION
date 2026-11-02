@@ -43,25 +43,17 @@ through the approval ledger + one-time bridge grant (proven again in
   (Phase 7); earlier phases pushed per phase. PR #1 updated with a
   per-phase comment for every phase.
 
-## Remaining risks / known gaps (honest)
+## Remaining risks / known gaps (Phase B.1 triage: fixed vs TODO with owner + priority)
 
-1. **Social live posting is dark** — code path exists but unexercised until
-   credentials + app review land; dry-run is the only reachable mode today
-   (by construction, and tested that way).
-2. **TikTok public posts need app review** — unreviewed apps can only post
-   privately; the provider spec says so.
-3. **Instagram needs an image URL** hosted publicly — the chat heuristic
-   captures a URL if present, but the official flow (container → publish)
-   is two calls; the scaffold builds the container request only.
-4. **Voice STT is Chromium/Safari-only** (Web Speech API); Firefox users see
-   no mic button. Local-model STT remains an owner install (whisper > 1 GB).
-5. **Scheduler fires only while the API process runs** — missed windows
-   during downtime are skipped, not back-filled (next tick recalculated).
-6. **Auth is opt-in** — routes honor `get_current_principal`/`WRITE_ROLES`
-   but with auth disabled everything is the `default` tenant, as before.
-7. Pre-existing, untouched: `.qoder/**` IDE artifacts in history (one
-   contains an absolute /Users path from the repo's initial commit — not
-   introduced by this session).
+| # | Risk | Triage outcome | Owner | Priority |
+|---|---|---|---|---|
+| 1 | **Social live posting is dark** — code path exists but unexercised until credentials + app review land; dry-run is the only reachable mode (by construction, tested). | **TODO** — needs real provider credentials (STOP CONDITION this session). Keep live gated until the owner completes a credentialed smoke on a throwaway Page. | Owner (Abdullah) | P1 before `live_enabled: true` |
+| 2 | **TikTok public posts need app review** — unreviewed apps can only post privately; provider spec says so. | **TODO — external.** Register the Content Posting API app and complete TikTok review; nothing to fix in code. | Owner (Abdullah) | P2 |
+| 3 | **Instagram two-call flow incomplete** — official flow is container → publish; `build_request`/`post_live` perform the container call only, so a live IG post would create a container that never publishes. | **TODO** — fixing means writing unexercised live-mode network code (can't be tested without credentials; no-new-features rule). Dry-run preview already labels the endpoint, so nothing silently "succeeds" wrong today. Implement together with risk #1's credentialed smoke. | Abdullah (dev) | P1 with #1 |
+| 4 | **Voice STT is Chromium/Safari-only** (Web Speech API); Firefox shows no mic button. Local-model STT needs a >1 GB install. | **TODO — owner decision.** Either accept (badge the browser support) or install whisper/vosk. Not small enough for a drive-by. | Owner (Abdullah) | P3 |
+| 5 | **Scheduler fires only while the API process runs** — missed windows are skipped, not back-filled. | **Accepted design** for single-host MVP (documented in code + Phase 5 report); back-fill semantics is a feature, out of this session's scope. Revisit only if pilot users schedule critical jobs. | Mahnoor (if needed) | P3 |
+| 6 | **Auth is opt-in** — with `AION_REQUIRE_AUTH` off everything is the `default` tenant. | **MITIGATED this session (B.3):** startup now logs a WARNING whenever auth is off AND the bridge is reachable (`services/startup_guard.py`), and `scripts/preflight.sh` fails/warns the operator before boot. Enabling auth by default would break the existing frontend contract (no API-key capability in apps/web) — still an owner rollout step. | Owner (Abdullah) | P1 for any non-localhost deploy |
+| 7 | Pre-existing `.qoder/**` IDE artifacts tracked (one with an absolute /Users path from the initial commit). | **FIXED going forward (B.4):** `.qoder/` gitignored, tracked files + stray `output/` artifacts removed with `git rm --cached` (commit `9fb13e6`). History itself untouched — purging the old blob requires a history rewrite, which this branch policy forbids. Accepted residual risk. | — | closed |
 
 ## Owner (me) manual actions required
 
