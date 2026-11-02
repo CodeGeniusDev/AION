@@ -108,8 +108,10 @@ export function DesktopView() {
 
   const loadAudit = useCallback(async () => {
     try {
-      const response = await getAudit(12);
-      setAudit(response.items);
+      // The API returns the trail chronologically; fetch a wide window and
+      // keep the newest rows, rendered oldest→newest inside that window.
+      const response = await getAudit(100);
+      setAudit(response.items.slice(-12));
       setAuditState("ready");
     } catch {
       setAuditState("error");
