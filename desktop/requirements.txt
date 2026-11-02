@@ -12,10 +12,11 @@ pynput>=1.7,<2.0         # Keyboard/mouse input control
 # Browser automation
 playwright>=1.64,<2.0    # Chromium browser control
 
-# Voice
-openai-whisper>=20244,<2025   # Speech-to-text (has optional ffmpeg)
-edge-tts>=6.0,<7.0           # Text-to-speech (offline-ok, high quality)
-# pyttsx3>=2.99,<3.0          # Alternative TTS (local, fully offline)
+# Voice — optional backends only (Phase 6). Absent = graceful degradation,
+# never a crash. whisper pulls torch (>1 GB): owner decision, left uninstalled.
+# openai-whisper>=20244,<2025   # Speech-to-text (has optional ffmpeg)
+# edge-tts>=6.0,<7.0            # Text-to-speech (offline-ok, high quality)
+# pyttsx3>=2.99,<3.0            # Alternative TTS (local, fully offline)
 
 # Scheduling (already in stdlib)
 # apscheduler>=3.10,<4.0     # Alternative to the stdlib sched (for MVP-4)
@@ -24,9 +25,3 @@ edge-tts>=6.0,<7.0           # Text-to-speech (offline-ok, high quality)
 pydantic>=2.10,<3.0      # Data validation (shared with AION backend)
 fastapi>=0.115,<1.0      # Local agent HTTP bridge (shared with AION backend)
 uvicorn>=0.34,<0.35      # Local agent HTTP bridge (shared with AION backend)
-
-# Optional voice backends (config.yaml voice.stt / voice.tts picks them).
-# Absent = graceful degradation; whisper pulls torch (>1 GB) - owner choice.
-# openai-whisper>=20240930
-# edge-tts>=7.0,<8.0
-# vosk>=0.10,<1.0
