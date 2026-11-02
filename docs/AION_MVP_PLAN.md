@@ -38,7 +38,7 @@ The fix is not a rewrite. It is a **glue layer**: a local Python agent (in the s
 | Auth                | Opt-in API-key auth (`AION_REQUIRE_AUTH`), tenant resolution                                         |
 | Rate limiting       | Per-IP + per-key rate limiter                                                                        |
 | Observability       | Request ID/correlation IDs, structured logging, metrics                                              |
-| Testing             | 428 backend tests + 9 desktop bridge tests + 5 Playwright e2e smoke tests                           |
+| Testing             | 428 backend tests + 42 desktop bridge/browser tests + 5 Playwright e2e smoke tests                           |
 | Docker              | Compose for web + api                                                                                |
 | UI / responsiveness | Tailwind + Radix primitives; layout is mobile-responsive already (sidebar, top nav, responsive grid) |
 
@@ -96,13 +96,13 @@ AION is the **brain**. The lower layer is the **hands**: tools that actually do 
 ### MVP-2 — Desktop automation (highest "wow")
 
 - [ ] Python automation CLI: `aion-desktop`
-- [ ] Browser control via Playwright (headless Chrome)
+- [x] Browser control via Playwright (headless Chrome) — `browser_navigate` + `browser_screenshot` shipped (approval-gated, URL allow/deny policy, workspace-confined screenshots)
   - `desktop_open_app`
-  - `browser_navigate`
-  - `browser_type`
-  - `browser_click`
-  - `browser_screenshot`
-  - `browser_upload_file`
+  - `browser_navigate` ✅
+  - `browser_type` (planned — needs stateful sessions)
+  - `browser_click` (planned — needs stateful sessions)
+  - `browser_screenshot` ✅
+  - `browser_upload_file` (planned)
 - [ ] Desktop control via PyAutoGUI + screencapture
 - [ ] File ops: copy, read, write
 - [ ] Local voice bridge (STT + TTS)
@@ -173,7 +173,7 @@ AION Codebase (this repo)
 ## 6. SECURITY — Non-negotiable rules
 
 1. **No password sharing.** OAuth2 only for social accounts.
-2. **No unattended browser.** Playwright headless by default. User must explicitly enable "visible" mode.
+2. **No unattended browser.** Playwright is headless by default and headlessness is decided by `desktop/config.yaml` only — an execution request can never make the browser visible. Every navigation is policy-checked (http/https only, loopback admin ports refused, allow/deny lists honored) before the browser launches, and screenshots can only be written inside the bridge's workspace.
 3. **Local scripts are path-restricted.** Only files under `~/Desktop/AION/` (or a config allowlist) can be read/written. No shell injection.
 4. **All long-running tasks run as separate tasks** with status updates. Never block the chat.
 5. **Rate limiting** applies to the local agent too.
@@ -231,7 +231,7 @@ AION/
 ### 30 Days — MVP-1 + MVP-2 (desktop automation)
 
 - [x] WorkflowRunner + tasks table + local tool registry
-- [ ] Browser control in Playwright
+- [x] Browser control in Playwright (navigate + screenshot behind the approval gate; click/type planned)
 - [ ] Desktop control in PyAutoGUI
 - [ ] File ops
 - [ ] Voice bridge

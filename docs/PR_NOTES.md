@@ -91,3 +91,35 @@ so conflicts can be checked before merge.
   approval statuses; `types/index.ts` +`DesktopHealth`; `services/api.ts`
   +`getApprovals`/`getAudit`/`getDesktopHealth`; Playwright smoke test for
   `/desktop` (5 smoke tests total); `.gitignore` + Playwright run artifacts
+
+### Phase 4 — Browser tools (Playwright) behind approval
+- `desktop/aion_desktop/browser.py` — rewritten against the real Playwright
+  API (the previous `start()`/`navigate()`/`click()` could not run): one
+  active page per execution so navigate→screenshot compose; new
+  `BrowserPolicy` (http/https only — `file:`/`chrome:`/`javascript:`…
+  refused; loopback admin ports 3000/3001/8000/8010/8080/8443 refused;
+  allowlist pins hosts, denylist always wins; post-redirect re-check)
+  + `browser_policy_from_config`
+- `desktop/aion_desktop/bridge.py` — `browser_navigate` no longer honors a
+  requester-supplied `headless` param (config-only); `browser_screenshot`
+  no longer honors a requester-supplied `output_path` (always derived
+  inside the workspace) and now actually navigates its `url` param; both
+  validate against the policy before launching Chromium; policy +
+  headless wired from config in `build_app`
+- `desktop/aion_desktop/config.py` + `desktop/config.yaml` — additive
+  `browser.blocked_ports` / `browser.allowlist` / `browser.denylist`
+- `desktop/tests/test_browser_policy.py` (NEW, 26 cases) and
+  `desktop/tests/test_browser_executors.py` (NEW — executor contract with
+  mocked manager + real-Chromium integration tests, auto-skip if the
+  browser build is missing). Desktop suite 9 → 42 tests.
+- `apps/api/tests/test_bridge_security.py` + `desktop/tests/test_bridge_security.py`
+  — signature-only fix (`**kwargs`) to the `_executor_for` monkeypatch
+- No API route/model/env changes this phase; approval gate, protected-tool
+  list and Gemini declarations untouched (428 backend tests prove it)
+- Install report: `playwright 1.64.1` pip-installed into `.venv` and
+  `python -m playwright install chromium` downloaded Chromium build 1248
+  (104.1 MiB headless-shell + full build; cache now ~612 MB — the Node
+  build 1243 could not be reused because Python playwright 1.64 pins 1248)
+- `browser_click`/`browser_type` deliberately NOT exposed: they would need
+  approval-gate registration + param-hash coverage + stateful sessions;
+  documented as planned in docs/AION_MVP_PLAN.md
