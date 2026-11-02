@@ -14,7 +14,7 @@ AION right now is a **smart AI command center**: agents talk to each other, veri
 
 1. **Partial desktop control** — file operations and app launches now run through the approval-gated local bridge (chat → pending approval → human approves → executes once), and scheduled desktop actions fire as pending approvals at their time (Phase 5), but browser clicking and social posting are not built yet.
 2. **No social automation** — TikTok, Pinterest, and Facebook are manual today.
-3. **No voice assistant** — AION can "talk" but cannot yet "listen" and act on voice commands.
+3. **Partial voice assistant** — chat now accepts browser dictation (Web Speech API) and replies can be spoken through an optional edge-tts endpoint (Phase 6); local-model STT (whisper/vosk) and wake-word remain unbuilt.
 
 The fix is not a rewrite. It is a **glue layer**: a local Python agent (in the same repo) that AION's tool system calls. AION stays the brain; this layer is the hands, eyes, and voice.
 
@@ -38,7 +38,7 @@ The fix is not a rewrite. It is a **glue layer**: a local Python agent (in the s
 | Auth                | Opt-in API-key auth (`AION_REQUIRE_AUTH`), tenant resolution                                         |
 | Rate limiting       | Per-IP + per-key rate limiter                                                                        |
 | Observability       | Request ID/correlation IDs, structured logging, metrics                                              |
-| Testing             | 439 backend tests + 42 desktop bridge/browser tests + 5 Playwright e2e smoke tests                           |
+| Testing             | 446 backend tests + 47 desktop bridge/browser/voice tests + 5 Playwright e2e smoke tests                           |
 | Docker              | Compose for web + api                                                                                |
 | UI / responsiveness | Tailwind + Radix primitives; layout is mobile-responsive already (sidebar, top nav, responsive grid) |
 
@@ -47,8 +47,8 @@ The fix is not a rewrite. It is a **glue layer**: a local Python agent (in the s
 | Area                  | Status                                                         |
 | --------------------- | -------------------------------------------------------------- |
 | External web research | Only static test corpus + internal memory. No live web source. |
-| Voice assistant       | No STT/TTS module.                                             |
-| Desktop automation    | No tools exist yet.                                            |
+| Voice assistant       | Browser dictation into chat + optional server TTS (`/api/voice/*`); no local-model STT.           |
+| Desktop automation    | Approval-gated bridge tools ship (files, apps, screenshots, browser navigate) — PyAutoGUI-grade input not yet. |
 | Social media tools    | No tools exist yet.                                            |
 
 ### What AION has not built yet (capability gaps, not impossibilities)
@@ -57,7 +57,8 @@ The fix is not a rewrite. It is a **glue layer**: a local Python agent (in the s
 - Navigate a browser and click/type
 - Upload a file to a website
 - Post to Facebook / Instagram / TikTok / Pinterest — **planned via official APIs** (see MVP-3): Meta Graph API for Facebook/Instagram Pages, Pinterest API, TikTok Content Posting API (after app review). Requires a developer app + OAuth credentials from the owner.
-- Take voice commands
+- Dictate fully offline voice commands (browser dictation ships; local whisper/vosk models are owner-installed)
+- Wake-word activation
 - Run background tasks on a schedule **without approval** — scheduled desktop actions exist (Phase 5) but they only ever produce pending approvals; unattended execution is deliberately not a design goal
 
 ---
@@ -105,8 +106,8 @@ AION is the **brain**. The lower layer is the **hands**: tools that actually do 
   - `browser_screenshot` ✅
   - `browser_upload_file` (planned)
 - [ ] Desktop control via PyAutoGUI + screencapture
-- [ ] File ops: copy, read, write
-- [ ] Local voice bridge (STT + TTS)
+- [x] File ops: copy, read, write (approval-gated bridge executors, ledgered + audit-logged)
+- [x] Local voice bridge (Phase 6): browser dictation feeds the normal chat path (approval rules apply unchanged); optional edge-tts server synthesis plays replies in the browser; `/api/voice/status` reports availability as data; bridge voice executors honor `config.yaml voice.stt/voice.tts` and degrade without crashing
 
 ### MVP-3 — Social media (planned, requires developer app + OAuth credentials from the owner)
 
@@ -121,10 +122,10 @@ just not built yet and gated on owner-supplied credentials and app review:
 
 ### MVP-4 — Voice assistant
 
-- [ ] STT: Whisper (local) or Web Speech API
-- [ ] TTS: Edge TTS or pyttsx3 (local)
+- [x] STT: Web Speech API (browser dictation → normal chat path) — whisper/vosk local models remain owner-installed options (large downloads, deliberately not performed here)
+- [x] TTS: Edge TTS (optional `edge-tts` package; structured "not installed" state otherwise) — pyttsx3 remains an option
 - [ ] Wake word / voice command parsing → same tool dispatcher
-- [ ] Voice status output ("AION, done" style reply)
+- [x] Voice status output ("Speak" reads the answer aloud in the browser via `/api/voice/say`)
 
 ### Phase-5 — Full orchestration
 
@@ -234,8 +235,8 @@ AION/
 - [x] WorkflowRunner + tasks table + local tool registry
 - [x] Browser control in Playwright (navigate + screenshot behind the approval gate; click/type planned)
 - [ ] Desktop control in PyAutoGUI
-- [ ] File ops
-- [ ] Voice bridge
+- [x] File ops (approval-gated: read/write/copy through the ledgered bridge)
+- [x] Voice bridge (browser dictation → chat; optional edge-tts synthesis)
 - [x] Dashboard "Desktop" tab
 
 ### 60 Days — MVP-3 (social media)

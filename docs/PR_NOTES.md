@@ -167,3 +167,41 @@ touches the bridge, builds no grant, and cannot approve.
   refused by the workspace guard; backend restart preserved both rows
 - Gemini declarations and protected-tool policy untouched and still
   test-proven; approval gate not weakened in any way
+
+## Phase 6 — Voice with graceful degradation
+
+Shipped (optional deps only; no large downloads). Voice text enters the
+**normal chat path**, so every Phase 2 rule applies to dictated input —
+proved live: dictated message → pending approval → human reject → nothing
+executed. STT deliberately runs in the browser (Web Speech API, zero
+deps); server TTS uses optional `edge-tts` and degrades to a structured
+"not installed" body — never a crash. No voice route touches the bridge
+or the approval ledger (test with an exploding bridge client proves it).
+
+- `apps/api/services/voice_service.py` (NEW) — lazy availability probes +
+  `synthesize()`; bounded text (1–1000 chars); third-party failures
+  collapse into one honest `VoiceUnavailable`
+- `apps/api/routes/voice.py` + `apps/api/models/voice.py` (NEW) —
+  `GET /api/voice/status`, `POST /api/voice/say` (base64 MP3 or
+  availability state) under the existing auth dependency
+- `desktop/aion_desktop/bridge.py` — voice executors now honor
+  `config.yaml voice.stt/voice.tts` (request-supplied backend names are
+  ignored — same policy as browser headlessness); degradation returns an
+  error dict, never an exception
+- Shared files touched (Mahnoor): `apps/api/main.py` (voice router),
+  `apps/api/requirements.txt` + `desktop/requirements.txt` (optional
+  voice backends documented, commented out)
+- `apps/api/tests/test_voice.py` (NEW, 7) + `desktop/tests/test_voice_executors.py`
+  (NEW, 5) — mocked backends throughout, no network in tests. Backend
+  439 → 446, desktop 42 → 47
+- Frontend: `utils/speech.ts` (NEW, typed Web Speech wrapper — no new npm
+  deps), dictation mic in the chat composer (feature-detected, hidden on
+  unsupported browsers), "Speak" on answers (renders only when TTS is
+  available), types + api calls per existing patterns
+- Install report: `edge-tts 7.3.1` pip-installed (small pure-Python
+  wheels, ~no models). `openai-whisper`/`vosk` NOT installed — whisper
+  pulls torch (>1 GB, over the session's download limit); owner decision
+  documented
+- Live E2E (raw output in report): status contract, real synthesis
+  (33 KB MPEG layer III), dictated chat → pending → reject → no file,
+  logs free of dictated content and secrets
