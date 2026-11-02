@@ -76,6 +76,8 @@ from aion_desktop.config import (
     load_config,
 )
 from aion_desktop.files import FileCopyTool, FileReadTool, FileWriteTool
+from aion_desktop.social.oauth import TokenVault
+from aion_desktop.social.providers import PROVIDERS, get_provider
 from aion_desktop.voice import VoiceBridge, VoiceNotConfiguredError
 
 logger = logging.getLogger("aion_desktop.bridge")
@@ -154,6 +156,7 @@ def _executor_for(
     headless: bool = True,
     voice_stt: str = "whisper",
     voice_tts: str = "edge",
+    social: dict[str, Any] | None = None,
 ):
     """Return a sync callable that executes the named tool and returns a
     plain dict (not a coroutine)."""
@@ -314,6 +317,37 @@ def _executor_for(
                 return {"success": False, "error": str(exc)}
         return _exec
 
+    if tool_name == "social_post":
+        # Phase 7: official-API scaffolding. Live-vs-dry-run is decided
+        # by THIS machine's config plus the token vault — request
+        # parameters like "live" or "dry_run" are ignored, exactly like
+        # browser headlessness and voice backends. No token material
+        # ever enters the result; the default path performs zero
+        # network I/O.
+        social_cfg = social or {}
+        live_enabled = bool(social_cfg.get("live_enabled", False))
+        vault = TokenVault(social_cfg.get("oauth_dir", "~/.aion"))
+
+        async def _exec(params: dict[str, Any]) -> dict[str, Any]:
+            platform = str(params.get("platform", ""))
+            content = str(params.get("content", ""))
+            media_url = params.get("media_url") or None
+            provider = get_provider(platform)
+            if provider is None:
+                return {
+                    "success": False,
+                    "error": f"Unsupported platform: {platform!r}. "
+                             f"Supported: {sorted(PROVIDERS)}",
+                }
+            refusal = provider.validate(content, media_url)
+            if refusal:
+                return {"success": False, "error": refusal,
+                        "platform": provider.spec.platform}
+            if provider.live_gate_open(live_enabled, vault):
+                return await provider.post_live(content, media_url, vault)
+            return provider.dry_run(content, media_url, vault)
+        return _exec
+
     return None  # unknown tool
 
 
@@ -361,6 +395,12 @@ def build_app(secret: str, port: int) -> FastAPI:
     # Same policy for voice backends: config.yaml decides (Phase 6).
     app.state.voice_stt = str(config.get("voice", {}).get("stt", "whisper"))
     app.state.voice_tts = str(config.get("voice", {}).get("tts", "edge"))
+    # Same policy for social posting: config.yaml + the local token
+    # vault decide live vs dry-run — never the request (Phase 7).
+    app.state.social = {
+        "live_enabled": bool(config.get("social", {}).get("live_enabled", False)),
+        "oauth_dir": str(config.get("oauth_dir", "~/.aion")),
+    }
 
     # Define routes inside build_app so `app` is in scope
     @app.get("/health")
@@ -433,6 +473,7 @@ def build_app(secret: str, port: int) -> FastAPI:
             headless=app.state.browser_headless,
             voice_stt=app.state.voice_stt,
             voice_tts=app.state.voice_tts,
+            social=app.state.social,
         )
         if tool_func is None:
             raise HTTPException(status_code=404, detail=f"Unknown tool: {tool_name}")

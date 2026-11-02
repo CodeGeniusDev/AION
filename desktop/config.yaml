@@ -33,6 +33,13 @@ browser:
 desktop:
   capture_enabled: true # Enable screen captures
 
+# Social posting (Phase 7: official APIs only, scaffolding + dry-run).
+# live_enabled is THIS machine's decision — a request parameter can never
+# flip it. Even when true, posting also requires a real OAuth token in the
+# vault below and official app credentials in .env (see .env.example).
+social:
+  live_enabled: false # Keep false until credentials + review are in place
+
 # Logging
 logs:
   level: "INFO"

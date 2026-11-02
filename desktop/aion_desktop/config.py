@@ -7,7 +7,8 @@ Configuration keys (with defaults):
   app_name: "AION Desktop Agent"
   workspace_dir: "<project>/desktop_workspace"
   allowed_dirs: ["~/Desktop", "~/AION/AION/desktop_workspace"]
-  oauth_dir: "~/.aion"
+  oauth_dir: "~/.aion"  # OAuth token vault (0600 files, never in git)
+  social.live_enabled: false  # dry-run unless owner flips this
   voice.stt: "whisper" | "vosk" | "web"
   voice.tts: "edge" | "pyttsx3"
   browser.headless: true
@@ -40,7 +41,9 @@ DEFAULT_CONFIG: dict[str, Any] = {
         str(Path.home() / "Desktop"),
         "desktop_workspace",
     ],
-    "oauth_dir": ".aion",
+    # OAuth tokens live in the user's home, never in the repo or the
+    # workspace (Phase 7). Relative values are anchored to home.
+    "oauth_dir": "~/.aion",
     "voice": {
         "stt": "whisper",
         "tts": "edge",
@@ -55,6 +58,11 @@ DEFAULT_CONFIG: dict[str, Any] = {
     },
     "desktop": {
         "capture_enabled": True,
+    },
+    # Social posting (Phase 7): dry-run unless the owner flips this AND
+    # has real tokens in the vault. Requests can never override it.
+    "social": {
+        "live_enabled": False,
     },
     "logs": {
         "level": "INFO",
