@@ -12,7 +12,7 @@
 
 AION right now is a **smart AI command center**: agents talk to each other, verify each other's output, remember things, and handle chat/agents/tasks/memory. But it has three gaps:
 
-1. **No desktop control** — AION cannot open apps, click in a browser, upload a file, or schedule a post.
+1. **Partial desktop control** — file operations and app launches now run through the approval-gated local bridge (chat → pending approval → human approves → executes once), but browser clicking, scheduling and social posting are not built yet.
 2. **No social automation** — TikTok, Pinterest, and Facebook are manual today.
 3. **No voice assistant** — AION can "talk" but cannot yet "listen" and act on voice commands.
 
@@ -38,7 +38,7 @@ The fix is not a rewrite. It is a **glue layer**: a local Python agent (in the s
 | Auth                | Opt-in API-key auth (`AION_REQUIRE_AUTH`), tenant resolution                                         |
 | Rate limiting       | Per-IP + per-key rate limiter                                                                        |
 | Observability       | Request ID/correlation IDs, structured logging, metrics                                              |
-| Testing             | 426 backend tests + 9 desktop bridge tests + Playwright e2e smoke test                              |
+| Testing             | 428 backend tests + 9 desktop bridge tests + 5 Playwright e2e smoke tests                           |
 | Docker              | Compose for web + api                                                                                |
 | UI / responsiveness | Tailwind + Radix primitives; layout is mobile-responsive already (sidebar, top nav, responsive grid) |
 
@@ -91,7 +91,7 @@ AION is the **brain**. The lower layer is the **hands**: tools that actually do 
 - [x] Add a persistent `tasks` table + `task_status` flow (pending → running → completed/failed)
 - [x] Add a `local_tools` registry mapping tool names → Python scripts / functions
 - [x] Chat → approval link (Phase 2): a chat message can *create* a pending approval for a protected desktop tool via the existing approval service. The model can never approve, execute, or see grant tokens — only the human queue (`/tasks` → `POST /api/approvals/{id}/approve`) executes. Gemini tool declarations remain calculator/text_analysis/current_datetime only.
-- [ ] Add a simple "Desktop" tab in the dashboard showing active tasks (planned)
+- [x] "Desktop" tab in the dashboard (Phase 3): approval queue, desktop task history with real output, bridge health indicator and recent audit events at `/desktop`
 
 ### MVP-2 — Desktop automation (highest "wow")
 
@@ -235,7 +235,7 @@ AION/
 - [ ] Desktop control in PyAutoGUI
 - [ ] File ops
 - [ ] Voice bridge
-- [ ] Dashboard "Desktop" tab
+- [x] Dashboard "Desktop" tab
 
 ### 60 Days — MVP-3 (social media)
 

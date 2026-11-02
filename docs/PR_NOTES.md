@@ -73,3 +73,21 @@ so conflicts can be checked before merge.
 - Frontend (contract-compatible): `types/index.ts` (+`PendingApprovalInfo`,
   optional `pending_approval`), `components/chat/aion-message.tsx`
   (amber "Approval pending" card linking to the queue)
+
+### Phase 3 — Desktop tab
+- `apps/api/services/desktop_bridge_client.py` — new `health()` GET probe;
+  deliberately sends no secret header (bridge /health is auth-free)
+- `apps/api/routes/desktop.py` — NEW endpoint `GET /api/desktop/health`
+  (always 200; offline bridge = `reachable:false` data, never an HTTP error;
+  response carries no URL/token/tool material — asserted in tests)
+- `apps/api/models/approval.py` — additive `DesktopHealthResponse`
+- `apps/api/tests/test_desktop_approvals.py` — +2 tests (reachable mapping,
+  offline-is-data, secret-leak scan); MockBridgeClient gains `health()`
+- No changes to `config.py`, `.env.example`, or `main.py` this phase
+- Frontend: new `app/desktop/page.tsx` + `components/desktop/desktop-view.tsx`
+  (approval queue, task history with real outputs, bridge health, audit
+  trail; loading/error/empty states; responsive); `sidebar.tsx` entry;
+  `approval-queue.tsx` optional `fallback` prop; `status-badge.tsx` gains
+  approval statuses; `types/index.ts` +`DesktopHealth`; `services/api.ts`
+  +`getApprovals`/`getAudit`/`getDesktopHealth`; Playwright smoke test for
+  `/desktop` (5 smoke tests total); `.gitignore` + Playwright run artifacts
