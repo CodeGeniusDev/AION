@@ -152,6 +152,8 @@ def _executor_for(
     *,
     browser_policy=None,
     headless: bool = True,
+    voice_stt: str = "whisper",
+    voice_tts: str = "edge",
 ):
     """Return a sync callable that executes the named tool and returns a
     plain dict (not a coroutine)."""
@@ -289,7 +291,8 @@ def _executor_for(
         return _exec
 
     if tool_name == "voice_listen":
-        _bridge = VoiceBridge()
+        # Backend choice is this machine's config, never the request.
+        _bridge = VoiceBridge(stt_backend=voice_stt, tts_backend=voice_tts)
 
         def _exec(params: dict[str, Any]) -> dict[str, Any]:
             try:
@@ -300,7 +303,7 @@ def _executor_for(
         return _exec
 
     if tool_name == "voice_say":
-        _bridge = VoiceBridge()
+        _bridge = VoiceBridge(stt_backend=voice_stt, tts_backend=voice_tts)
 
         def _exec(params: dict[str, Any]) -> dict[str, Any]:
             text = params.get("text", "")
@@ -355,6 +358,9 @@ def build_app(secret: str, port: int) -> FastAPI:
     # Security: headlessness is a property of THIS machine, decided by
     # its config — never by the parameters of an incoming request.
     app.state.browser_headless = bool(config.get("browser", {}).get("headless", True))
+    # Same policy for voice backends: config.yaml decides (Phase 6).
+    app.state.voice_stt = str(config.get("voice", {}).get("stt", "whisper"))
+    app.state.voice_tts = str(config.get("voice", {}).get("tts", "edge"))
 
     # Define routes inside build_app so `app` is in scope
     @app.get("/health")
@@ -425,6 +431,8 @@ def build_app(secret: str, port: int) -> FastAPI:
             tool_name, workspace, app.state.workspace_allowed,
             browser_policy=app.state.browser_policy,
             headless=app.state.browser_headless,
+            voice_stt=app.state.voice_stt,
+            voice_tts=app.state.voice_tts,
         )
         if tool_func is None:
             raise HTTPException(status_code=404, detail=f"Unknown tool: {tool_name}")

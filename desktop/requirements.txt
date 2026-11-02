@@ -24,3 +24,9 @@ edge-tts>=6.0,<7.0           # Text-to-speech (offline-ok, high quality)
 pydantic>=2.10,<3.0      # Data validation (shared with AION backend)
 fastapi>=0.115,<1.0      # Local agent HTTP bridge (shared with AION backend)
 uvicorn>=0.34,<0.35      # Local agent HTTP bridge (shared with AION backend)
+
+# Optional voice backends (config.yaml voice.stt / voice.tts picks them).
+# Absent = graceful degradation; whisper pulls torch (>1 GB) - owner choice.
+# openai-whisper>=20240930
+# edge-tts>=7.0,<8.0
+# vosk>=0.10,<1.0
