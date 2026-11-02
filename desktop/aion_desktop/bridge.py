@@ -63,7 +63,12 @@ from typing import Any
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
-from aion_desktop.browser import BrowserManager
+from aion_desktop.browser import (
+    BrowserManager,
+    BrowserPolicy,
+    UrlBlockedError,
+    browser_policy_from_config,
+)
 from aion_desktop.config import (
     get_allowed_dirs,
     get_log_level,
@@ -135,7 +140,19 @@ class _GrantStore:
 # Tool registry: tool name -> executor (sync wrapper for async tools)
 # ---------------------------------------------------------------------------
 
-def _executor_for(tool_name: str, workspace: Path, allowed_dirs: list[Path]):
+# Fail-closed policy used whenever an executor is built without one
+# (tests, direct imports): default denylist rules still apply.
+_default_browser_policy = BrowserPolicy()
+
+
+def _executor_for(
+    tool_name: str,
+    workspace: Path,
+    allowed_dirs: list[Path],
+    *,
+    browser_policy=None,
+    headless: bool = True,
+):
     """Return a sync callable that executes the named tool and returns a
     plain dict (not a coroutine)."""
     if tool_name == "desktop_open_app":
@@ -187,26 +204,48 @@ def _executor_for(tool_name: str, workspace: Path, allowed_dirs: list[Path]):
 
     if tool_name == "browser_navigate":
         async def _exec(params: dict[str, Any]) -> dict[str, Any]:
+            # Security: headless comes from the bridge's own config and
+            # the URL policy is enforced before the browser launches.
+            # A request parameter can never un-hide the browser or pick
+            # an off-policy target.
             url = params.get("url", "")
-            headless = params.get("headless", True)
+            policy = browser_policy or _default_browser_policy
             try:
-                async with BrowserManager(headless=headless) as browser:
+                policy.validate(url)
+            except UrlBlockedError as exc:
+                logger.warning("browser_navigate blocked by policy: %s", exc)
+                return {"success": False, "error": f"URL not permitted: {exc}"}
+            try:
+                async with BrowserManager(headless=headless, policy=policy) as browser:
                     result = await browser.navigate(url)
                     return {"success": True, "result": result}
+            except UrlBlockedError as exc:  # redirect landed off-policy
+                return {"success": False, "error": f"Redirect not permitted: {exc}"}
             except Exception as exc:
                 return {"success": False, "error": str(exc)}
         return _exec
 
     if tool_name == "browser_screenshot":
         async def _exec(params: dict[str, Any]) -> dict[str, Any]:
+            # Security: the output path is DERIVED, never supplied — the
+            # caller's "output_path" parameter is ignored so no approved
+            # screenshot can be redirected outside the workspace.
             from datetime import datetime, timezone
-            output_path = params.get("output_path")
-            if not output_path:
-                ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%SZ")
-                output_path = str(workspace / f"browser-screenshot-{ts}.png")
+            url = params.get("url", "")
+            policy = browser_policy or _default_browser_policy
             try:
-                async with BrowserManager(headless=True) as browser:
+                policy.validate(url)
+            except UrlBlockedError as exc:
+                logger.warning("browser_screenshot blocked by policy: %s", exc)
+                return {"success": False, "error": f"URL not permitted: {exc}"}
+            ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%SZ")
+            output_path = str(workspace / f"browser-screenshot-{ts}.png")
+            try:
+                async with BrowserManager(headless=headless, policy=policy) as browser:
+                    await browser.navigate(url)
                     return await browser.screenshot(output_path)
+            except UrlBlockedError as exc:
+                return {"success": False, "error": f"Redirect not permitted: {exc}"}
             except Exception as exc:
                 return {"success": False, "error": str(exc)}
         return _exec
@@ -312,6 +351,10 @@ def build_app(secret: str, port: int) -> FastAPI:
     config = load_config()
     app.state.workspace = get_workspace(config)
     app.state.workspace_allowed = get_allowed_dirs(config)
+    app.state.browser_policy = browser_policy_from_config(config)
+    # Security: headlessness is a property of THIS machine, decided by
+    # its config — never by the parameters of an incoming request.
+    app.state.browser_headless = bool(config.get("browser", {}).get("headless", True))
 
     # Define routes inside build_app so `app` is in scope
     @app.get("/health")
@@ -378,7 +421,11 @@ def build_app(secret: str, port: int) -> FastAPI:
         task_id = body.get("task_id", "unknown")
         workspace = app.state.workspace
 
-        tool_func = _executor_for(tool_name, workspace, app.state.workspace_allowed)
+        tool_func = _executor_for(
+            tool_name, workspace, app.state.workspace_allowed,
+            browser_policy=app.state.browser_policy,
+            headless=app.state.browser_headless,
+        )
         if tool_func is None:
             raise HTTPException(status_code=404, detail=f"Unknown tool: {tool_name}")
 

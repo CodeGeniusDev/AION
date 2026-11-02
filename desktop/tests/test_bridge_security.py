@@ -119,7 +119,7 @@ def test_grant_and_secret_execute_once_replay_refused(monkeypatch):
 
     calls = {"n": 0}
 
-    def fake_executor_for(tool_name, workspace, allowed_dirs):
+    def fake_executor_for(tool_name, workspace, allowed_dirs, **kwargs):
         def _exec(params):
             calls["n"] += 1
             return {"success": True, "tool": tool_name}
