@@ -18,3 +18,7 @@ venv/
 # Local build artifacts / scratch output
 output/
 MVP_BUILD.log
+
+# Playwright run artifacts
+apps/web/test-results/
+apps/web/playwright-report/
