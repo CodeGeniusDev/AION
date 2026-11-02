@@ -69,7 +69,7 @@ class Settings:
     protected_desktop_tools: str = os.getenv(
         "AION_PROTECTED_DESKTOP_TOOLS",
         "desktop_open_app,desktop_screenshot,browser_navigate,"
-        "browser_screenshot,file_read,file_write,file_copy",
+        "browser_screenshot,file_read,file_write,file_copy,social_post",
     )
     # True (default): an approved action is dispatched to the bridge in a
     # BackgroundTask, so the approve request returns 202 immediately while

@@ -79,6 +79,9 @@ _ALLOWED_PARAMETERS: dict[str, dict[str, int]] = {
     "desktop_screenshot": {},
     "browser_navigate": {"url": 1024},
     "browser_screenshot": {"url": 1024},
+    # Phase 7: platform + text (+ optional media URL). Credentials, live
+    # mode and everything else are NOT request parameters by construction.
+    "social_post": {"platform": 32, "content": _MAX_CONTENT, "media_url": 1024},
 }
 
 # Any key matching this is dropped before it ever reaches the ledger —
@@ -115,7 +118,7 @@ def validate_parameters(tool: str, raw: dict[str, Any]) -> dict[str, Any]:
 _CLAUSE_START = re.compile(
     r"^(?:please\s+|now\s+|then\s+|and\s+|also\s+|you\s+can\s+)*"
     r"(write|create|make|save|put|dump|copy|duplicate|read|open|view|load|"
-    r"navigate|go|launch)\b",
+    r"navigate|go|launch|post|share|publish)\b",
     re.IGNORECASE,
 )
 
@@ -154,6 +157,27 @@ def detect_desktop_intent(message: str) -> DesktopIntent | None:
 
 def _detect_clause(clause: str) -> DesktopIntent | None:
     lowered = clause.lower()
+
+    # social_post: "post/share/publish \"text\" to <official platform>" —
+    # only the four scaffolded platforms match, and the quoted content is
+    # required so stray prose about "posting" stays inert. The bridge
+    # executor then runs dry-run unless its own config enables live.
+    if re.match(r"^(?:please\s+)?(?:post|share|publish)\b", lowered):
+        pm = re.search(
+            r"\b(?:to|on)\s+(?:my\s+)?(facebook|instagram|pinterest|tiktok)\b",
+            lowered,
+        )
+        content = _quoted(clause)
+        if pm and content:
+            raw: dict[str, Any] = {"platform": pm.group(1), "content": content}
+            url = _URL.search(clause)
+            if url:
+                raw["media_url"] = url.group(0)
+            return DesktopIntent(
+                tool="social_post",
+                parameters=validate_parameters("social_post", raw),
+            )
+        return None
 
     # file_copy: "copy <path> to/into <path>" — both sides must be paths.
     if re.match(r"^(?:please\s+)?(?:copy|duplicate)\b", lowered):
