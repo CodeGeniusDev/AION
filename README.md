@@ -39,7 +39,7 @@ AION/
 │       ├── routes/              # API route modules
 │       ├── services/            # Route-facing service layer (some real, some demo — see API routes table)
 │       ├── tools/               # Tool registry/executor + built-in deterministic tools
-│       ├── tests/               # Backend test suite (345 tests)
+│       ├── tests/               # Backend test suite (509 tests)
 │       └── main.py              # FastAPI application entry point
 ├── research/                 # Architecture notes
 ├── docker-compose.yml
@@ -55,7 +55,7 @@ npm run dev
 ```
 
 Available at [http://localhost:3000](http://localhost:3000). Pages: Dashboard,
-AI Chat, Tasks, Agents, Memory, Research, Workflows, Settings.
+AI Chat, Tasks, Agents, Memory, Research, Workflows, Desktop, Settings.
 
 ```bash
 npm run lint
@@ -95,7 +95,10 @@ python -m aion_desktop.bridge
 ```
 
 The bridge binds to `127.0.0.1:8080` only and refuses to start with an
-empty or `change-me-in-production` secret.
+empty or `change-me-in-production` secret. **It runs as a host process
+only — it is deliberately NOT a Docker Compose service**, because it
+executes real file/browser/desktop actions on this machine and must never
+be given host access from a containerized stack.
 
 ## Human-in-the-loop desktop tool approvals
 
@@ -137,7 +140,7 @@ What this does and does not defend against is enumerated in
 | `GET`  | `/api/memory`                            | **Real** — live counts from the SQLite-backed Cognitive Memory store                                                                                           |
 | `GET`  | `/api/research`                          | **Real** — Immune-verified semantic memory records tagged as research findings                                                                                 |
 | `GET`  | `/api/dashboard`                         | **Real** — aggregated from the Agent Registry and Cognitive Memory store                                                                                       |
-| `GET`  | `/api/workflows`                         | **Demo data.** No backend "Workflow" entity exists (no reusable workflow templates or execution store) — documented in `routes/workflows.py` rather than faked |
+| `GET`  | `/api/workflows`                         | **Real** — SQLite-backed Workflow entity store (list/detail/create/run); `runs` is a real counter, `state` derives from real executions |
 | `POST` | `/api/desktop/execute`                   | **Real** — requests a protected desktop action; creates a task + pending approval and never executes (`202`)                                                   |
 | `GET`  | `/api/approvals`, `/api/approvals/{id}`  | **Real** — tenant-scoped approval ledger (sanitized parameters)                                                                                                |
 | `POST` | `/api/approvals/{id}/approve`, `/reject` | **Real** — human decision: approve wins the atomic claim, registers a bridge grant, and dispatches once (`202`/`409`/`410`); reject is terminal (`200`)        |
@@ -179,12 +182,19 @@ hardening passes. Never commit a real `.env` file.
 ## Run with Docker Compose
 
 ```bash
+./scripts/preflight.sh      # PASS/WARN/FAIL: secret, DB paths, ports, .venv, chromium
 docker compose up --build
+curl -f http://localhost:8000/health   # api (also the container healthcheck)
+curl -f http://localhost:3000/         # web
 ```
 
-`docker-compose.yml` loads `apps/api/.env` (a real, git-ignored file you
+`docker-compose.yml` runs **api + web only** (the desktop bridge is a host
+process, see above). It loads `apps/api/.env` (a real, git-ignored file you
 create locally) — never `.env.example`, which intentionally contains no
-real values.
+real values. Both services have healthchecks and `restart: unless-stopped`;
+the `aion_data` volume holds `aion_memory.db` and `aion_approvals.db` under
+`/data` (`docker compose down -v` would wipe approval history — never on a
+real deployment). Full details: `docs/DEPLOYMENT.md` §4.
 
 ## Known limitations
 
@@ -194,7 +204,6 @@ real values.
 - **Single-process only.** The Cognitive Bus, Agent Registry, and rate
   limiter are in-memory and do not coordinate across multiple server
   instances.
-- **`/api/workflows` is demo data** — no backend Workflow entity exists.
 - **Tenant isolation covers Cognitive Memory only** (the one subsystem with
   real cross-request query risk); the Cognitive Bus and Tool/Research
   layers remain task-scoped, not tenant-scoped.

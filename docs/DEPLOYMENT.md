@@ -2,16 +2,17 @@
 
 ## 1. Prerequisites
 
-| Tool                   | Purpose                | Required                |
-| ---------------------- | ---------------------- | ----------------------- |
-| Python 3.11+           | Backend + local agent  | ✅                      |
-| Node.js 18+ + npm      | Frontend               | ✅ (optional for MVP-1) |
-| Playwright             | Browser control        | ✅ (MVP-2)              |
-| PyAutoGUI              | Desktop control        | ✅ (MVP-2)              |
-| openai-whisper or Vosk | Voice STT              | ✅ (MVP-4)              |
-| Edge TTS or pyttsx3    | Voice TTS              | ✅ (MVP-4)              |
-| aiohttp / httpx        | HTTP for local bridges | ✅                      |
-| pytest                 | Testing                | ✅ (already present)    |
+| Tool                   | Purpose                | Required                                  |
+| ---------------------- | ---------------------- | ----------------------------------------- |
+| Python 3.11+           | Backend + local agent  | ✅                                        |
+| Node.js 18+ + npm      | Frontend               | ✅ (optional for MVP-1)                   |
+| Playwright             | Browser control        | ✅ (MVP-2)                                |
+| PyAutoGUI              | Desktop control        | optional (screenshot/open-app paths)      |
+| openai-whisper or Vosk | Voice STT              | optional — browser Web Speech is default  |
+| Edge TTS or pyttsx3    | Voice TTS              | optional — `/api/voice/status` degrades   |
+| aiohttp / httpx        | HTTP for local bridges | ✅                                        |
+| pytest                 | Testing                | ✅ (already present)                      |
+| shellcheck             | linting scripts/       | optional (`pip install shellcheck-py`)    |
 
 ## 2. Step-by-step setup
 
@@ -36,6 +37,11 @@ npm run dev
 Open http://localhost:3000 — you land on Dashboard (auto-redirect to `/dashboard`).
 
 ### 2.3. Start the local agent
+
+**The bridge is a HOST process, never a Docker service.** It executes real
+file/browser/desktop actions on the machine it runs on; containerizing it
+(with host mounts) would give the web-facing stack direct access to your
+desktop. `docker-compose.yml` deliberately contains only `api` and `web`.
 
 The single documented run command (also used in MVP.sh and README):
 
@@ -103,26 +109,56 @@ STT_MODEL_SIZE=small
 | `AION_AGENT_BRIDGE_URL`        | `http://127.0.0.1:8080`                                                                                  | Local agent bridge base URL.                                                                                                   |
 | `AION_AGENT_SECRET`            | ``                                                                                                       | Shared secret for backend→bridge calls. Must match the bridge's own env. Server-side only; **never** exposed to the frontend.  |
 | `AION_BRIDGE_TIMEOUT_SECONDS`  | `30`                                                                                                     | Per-request timeout for bridge calls.                                                                                          |
-| `AION_PROTECTED_DESKTOP_TOOLS` | `desktop_open_app,desktop_screenshot,browser_navigate,browser_screenshot,file_read,file_write,file_copy` | Comma-separated tools that always require explicit human approval. `desktop_list_apps` is exempt (read-only).                  |
+| `AION_PROTECTED_DESKTOP_TOOLS` | `desktop_open_app,desktop_screenshot,browser_navigate,browser_screenshot,file_read,file_write,file_copy,social_post` | Comma-separated tools that always require explicit human approval. `desktop_list_apps` is exempt (read-only).                  |
+| `AION_MEMORY_DB_PATH`          | `` (in-memory)                                                                                           | SQLite path for cognitive memory; compose defaults it (and the approval DB) to `/data/*.db` on the `aion_data` volume.          |
 | `AION_APPROVAL_DISPATCH_ASYNC` | `1`                                                                                                      | `1`: dispatch approved actions in a background task (approve returns `202` immediately). `0`: dispatch inline (used by tests). |
 
-## 4. Running the MVP
+## 4. Docker Compose (api + web only)
+
+```bash
+cp apps/api/.env.example apps/api/.env   # fill real values — compose loads THIS file
+./scripts/preflight.sh                   # PASS/WARN/FAIL: secret, DB paths, ports, .venv, chromium
+docker compose build
+docker compose up -d
+curl -f http://localhost:8000/health     # api health (also the container healthcheck)
+curl -f http://localhost:3000/           # web root
+docker compose down                      # keeps the aion_data volume; NEVER `down -v` on a real deployment
+```
+
+- Ports: api `8000`, web `3000`, bridge `8080` (host process, not mapped by compose).
+- The `aion_data` volume mounts at `/data`; the api service defaults
+  `AION_MEMORY_DB_PATH=/data/aion_memory.db` and
+  `AION_APPROVAL_DB_PATH=/data/aion_approvals.db` (values in `apps/api/.env`
+  win if set). `docker compose down -v` wipes the approval/audit history.
+- `env_file` is `apps/api/.env` — never `.env.example` (it carries no real
+  values), and `.dockerignore` keeps `.env` out of image layers; compose
+  injects it at runtime only.
+- Healthchecks: api uses stdlib urllib against `/health`; web uses busybox
+  wget against `/`. Both use `restart: unless-stopped`, and web waits for
+  api to become healthy.
+- **Not yet verified by a live run:** Docker is not installed on the
+  development machine, so the commands above were not executed in this
+  session. Treat the first `docker compose up -d` as a validation step.
+
+## 5. Running the MVP
 
 1. Start backend (port 8000)
 2. Start frontend (port 3000)
-3. Start local agent bridge (port 8080): `cd desktop && export AION_AGENT_SECRET='your-secure-secret' && python -m aion_desktop.bridge`
-4. Open dashboard → Chat / Tasks (a dedicated Desktop tab is planned, not built yet)
-5. Request a desktop action through the approval API, e.g.:
+3. Start local agent bridge (port 8080, host process): `cd desktop && export AION_AGENT_SECRET='your-secure-secret' && python -m aion_desktop.bridge`
+4. Open dashboard → **Desktop** tab (real page: approval queue, task history,
+   bridge health, audit events) or Chat.
+5. Request a desktop action — either through Chat ("Write 'hi' to
+   ~/notes.txt" creates a pending approval automatically) or directly:
    `curl -X POST http://localhost:8000/api/desktop/execute -H 'Content-Type: application/json' -d '{"tool":"file_write","parameters":{"path":"desktop_workspace/hello.txt","content":"hi"}}'`
-   — chat-driven desktop control (chat message → pending approval) is planned, not built yet
-6. Protected desktop actions enter the **approval queue** (tasks page) and
-   raise an alert; nothing runs until you click **Approve**. An approved
-   action executes exactly once under a one-time bridge grant; **Reject**
-   is terminal and the linked task is marked failed.
+6. Protected desktop actions enter the **approval queue** (Desktop tab /
+   tasks page) and raise an alert; nothing runs until you click **Approve**.
+   An approved action executes exactly once under a one-time bridge grant;
+   **Reject** is terminal and the linked task is marked failed. Pending
+   requests expire after `AION_APPROVAL_TTL_SECONDS` (default 300 s).
 
 ---
 
-## 5. Notes for you
+## 6. Notes for you
 
 - **Playwright browser install**: `python -m playwright install chromium`
 - **Whisper model download**: `pip install openai-whisper`, then `whisper` will download a model on first use
