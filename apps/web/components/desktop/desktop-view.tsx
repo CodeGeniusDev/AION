@@ -17,6 +17,7 @@ import {
 import type { ApprovalRecord, AuditEvent, DesktopHealth } from "@/types";
 import { PageHeader } from "@/components/layout/page-header";
 import { ApprovalQueue } from "@/components/approvals/approval-queue";
+import { SchedulesPanel } from "@/components/desktop/schedules-panel";
 import { SectionCard } from "@/components/ui/section-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
@@ -193,7 +194,7 @@ export function DesktopView() {
               <span className="text-xs text-muted-text">
                 {health?.reachable
                   ? "Approved actions can dispatch now. Executions still require you here."
-                  : "Start the desktop agent (`python -m aion_desktop.cli serve`) — pending approvals stay safely queued until it returns."}
+                  : "Start the desktop agent (`python -m aion_desktop.cli run`) — pending approvals stay safely queued until it returns."}
               </span>
               <Activity className="ml-auto size-4 text-primary" aria-hidden="true" />
             </>
@@ -213,6 +214,9 @@ export function DesktopView() {
             </section>
           }
         />
+
+        {/* ── Scheduled actions — fire into the queue above, never past it ── */}
+        <SchedulesPanel />
 
         <div className="grid gap-5 lg:grid-cols-2">
           {/* ── Desktop task history ── */}

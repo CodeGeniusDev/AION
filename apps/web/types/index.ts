@@ -339,3 +339,37 @@ export interface AuditResponse {
   items: AuditEvent[];
   total: number;
 }
+
+// --- Scheduled desktop actions (scheduler integration) ---
+
+/** A schedule is a promise to *ask*, not a promise to do: when it fires it
+ * creates a pending approval that only a human decision can execute. */
+export type ScheduleStatus = "active" | "paused" | "completed" | "canceled";
+
+export interface Schedule {
+  id: string;
+  name: string;
+  tool: string;
+  parameters: Record<string, unknown>;
+  interval_seconds: number; // 0 = one-shot
+  status: ScheduleStatus;
+  next_run_at: string | null; // ISO-8601 UTC; null once finalized
+  last_run_at: string | null;
+  last_approval_id: string | null;
+  last_error: string | null;
+  fire_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SchedulesResponse {
+  items: Schedule[];
+}
+
+export interface ScheduleCreateRequest {
+  name: string;
+  tool: string;
+  parameters?: Record<string, unknown>;
+  interval_seconds?: number;
+  delay_seconds?: number;
+}

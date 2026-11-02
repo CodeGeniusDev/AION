@@ -15,6 +15,9 @@ import type {
   MemoryRecordsResponse,
   MemoryResponse,
   ResearchResponse,
+  Schedule,
+  ScheduleCreateRequest,
+  SchedulesResponse,
   StoredMessage,
   TaskDetail,
   TasksResponse,
@@ -326,5 +329,40 @@ export function approveAction(
 export function rejectAction(approvalId: string): Promise<ApprovalRecord> {
   return request<ApprovalRecord>(`/api/approvals/${approvalId}/reject`, {
     method: "POST",
+  });
+}
+
+// --- Scheduled desktop actions ---
+
+/** Schedules persist in SQLite on the backend and survive restarts.
+ * Firing one creates a PENDING approval — never an execution. */
+export function getSchedules(): Promise<SchedulesResponse> {
+  return request<SchedulesResponse>("/api/schedules");
+}
+
+export function createSchedule(payload: ScheduleCreateRequest): Promise<Schedule> {
+  return request<Schedule>("/api/schedules", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function pauseSchedule(scheduleId: string): Promise<Schedule> {
+  return request<Schedule>(`/api/schedules/${scheduleId}/pause`, {
+    method: "POST",
+  });
+}
+
+/** Resume re-arms one interval ahead — a paused schedule never bursts. */
+export function resumeSchedule(scheduleId: string): Promise<Schedule> {
+  return request<Schedule>(`/api/schedules/${scheduleId}/resume`, {
+    method: "POST",
+  });
+}
+
+/** Cancel is terminal but non-destructive: the row stays for history. */
+export function cancelSchedule(scheduleId: string): Promise<Schedule> {
+  return request<Schedule>(`/api/schedules/${scheduleId}`, {
+    method: "DELETE",
   });
 }
