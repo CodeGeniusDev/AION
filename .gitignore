@@ -17,6 +17,7 @@ venv/
 
 # Local build artifacts / scratch output
 output/
+.qoder/
 MVP_BUILD.log
 
 # Playwright run artifacts
