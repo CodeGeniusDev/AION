@@ -28,6 +28,36 @@ apps/web  $ npx tsc --noEmit             → exit 0
 apps/web  $ npm run lint                 → clean (max-warnings=0)
 ```
 
+---
+
+# Follow-up session (Nov 2) — Merge readiness & hardening (Phases A–D)
+
+Goal: make PR #1 safe to merge, then prepare real-world use. No new
+features. Branch `abdullah`, pushed only to `origin abdullah`.
+
+| Phase | Delivered | Commits | Raw gate results |
+|---|---|---|---|
+| A — Merge readiness | Divergence measured (61 commits ahead of main); scratch-branch merge trials of `origin/main` and `origin/mahnoor` both "Already up to date" — both are **ancestors** of abdullah, so PR #1 fast-forwards with zero conflicts (MERGE_NOTES.md not needed); PR_NOTES.md rewritten as a reviewer guide for Mahnoor; Playwright flaw fixed: `reuseExistingServer` had silently adopted a foreign app on port 3000 → config now takes `PLAYWRIGHT_PORT` | `da7783f`, `a3fdea0` | backend 456, desktop 63, tsc 0, lint 0, Playwright 5/5 on port 3123 |
+| B — Hardening | B.1 risk triage table (owner + priority per risk, see below); B.2 48-message table-driven audit of the chat intent heuristic — 22 positive / 24 inert incl. Roman Urdu + injections, **zero false positives/negatives, heuristic unchanged**; B.3 `services/startup_guard.py` (WARNING when auth off + bridge reachable, log-only, no secrets printed) + `scripts/preflight.sh` (secret/DB paths/ports/.venv/chromium/auth, PASS-WARN-FAIL, shellcheck 0.11.0 clean); B.4 `.qoder/` gitignored + `git rm --cached` (4 files) incl. stray tracked `output/` files (history untouched) | `f6b7f72`, `3689b8f`, `9fb13e6`, `7f0fed8` | backend 509 (+48 table +5 guard −old count), desktop 63, preflight live run correctly FAILs on the empty dev secret |
+| C — Docker readiness | compose reworked: api+web only (bridge documented host-process-only, by design), healthchecks (urllib / busybox wget), `restart: unless-stopped`, web waits on api healthy, `/data` volume now carries BOTH `aion_memory.db` and `aion_approvals.db` (env_file value wins via `:-`), `down -v` warning; README + DEPLOYMENT aligned to reality (stale "workflows is demo data", "Desktop tab planned", voice deps "required" all fixed) | `14d94d1`, `80be637` | **Docker is NOT installed on this machine — `docker compose build/up/down` could not be run and is NOT claimed.** Validated via YAML parse + structural assertions; first live `up -d` is an owner action |
+| D — Decoricks pilot | `docs/plans/decoricks-pilot.md`: 3 workflows (product-description drafter, Meta ad-copy studio, weekly SEO checklist) as real Workflow entities (model-safe agents only, ≤4000-char input), per-workflow data needs / human-approved seam / credential boundary; pilot order starts zero-credential | `3d2b090` | design doc only — no code, no live calls |
+
+End-of-session gates (all re-run at final HEAD):
+
+```
+apps/api  $ python -m pytest tests/ -q            → 509 passed
+desktop   $ python -m pytest tests/ -q            → 63 passed
+apps/web  $ npx tsc --noEmit                      → exit 0
+apps/web  $ npm run lint                          → clean (max-warnings=0)
+apps/web  $ PLAYWRIGHT_PORT=3123 npx playwright test → 5 passed
+```
+
+Manual actions surfaced by this session: (1) a stash holds 18 files of
+external Prettier reflow found dirty at session start (`git stash pop` or
+drop — deliberately not committed); (2) install Docker and run
+`docker compose up -d` once to validate C; (3) decide whether markdown
+files should stay formatter-managed (the reflow recurs on every edit).
+
 Invariant tests: Gemini function declarations remain exactly
 `calculator, text_analysis, current_datetime`; desktop tools reachable only
 through the approval ledger + one-time bridge grant (proven again in
