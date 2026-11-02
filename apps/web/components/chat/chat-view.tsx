@@ -1,8 +1,10 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import {
   MessageCircleMore,
+  Mic,
+  MicOff,
   Plus,
   Send,
   Sparkles,
@@ -29,6 +31,7 @@ import { ChatErrorState } from "./chat-error-state";
 import { ModeSelector } from "./mode-selector";
 import { ProcessingState } from "./processing-state";
 import { cn } from "@/utils/cn";
+import { speechRecognitionSupported, startDictation, type Dictation } from "@/utils/speech";
 
 export function ChatView() {
   const [activeChat, setActiveChat] = useState<string | null>(null);
@@ -44,6 +47,41 @@ export function ChatView() {
   );
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [sseTaskId, setSseTaskId] = useState<string | null>(null);
+
+  // ── Voice dictation (Web Speech API, browser-side only) ──
+  // Transcripts land in the composer and are sent through the ordinary
+  // chat path — every chat rule (approval gate included) applies as-is.
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const dictationRef = useRef<Dictation | null>(null);
+
+  useEffect(() => {
+    // Feature-detect after mount to avoid SSR hydration mismatch.
+    setSpeechSupported(speechRecognitionSupported());
+    return () => dictationRef.current?.stop();
+  }, []);
+
+  const toggleDictation = () => {
+    if (listening) {
+      dictationRef.current?.stop();
+      dictationRef.current = null;
+      setListening(false);
+      return;
+    }
+    setVoiceError(null);
+    const session = startDictation(
+      (text) => setInput((current) => (current ? `${current} ${text}` : text)),
+      (message) => setVoiceError(message),
+      () => setListening(false),
+    );
+    if (session) {
+      dictationRef.current = session;
+      setListening(true);
+    } else {
+      setVoiceError("Speech recognition could not start in this browser.");
+    }
+  };
 
   const manualInvalid = mode === "manual" && selectedAgents.length === 0;
 
@@ -384,6 +422,25 @@ export function ChatView() {
                 />
               </label>
 
+              {speechSupported && (
+                <Button
+                  size="icon"
+                  type="button"
+                  variant="outline"
+                  onClick={toggleDictation}
+                  aria-pressed={listening}
+                  aria-label={listening ? "Stop dictating" : "Dictate a message"}
+                  className={cn(
+                    listening && "border-[#b53d3d] bg-[#fff0f0] text-[#b53d3d] animate-pulse",
+                  )}>
+                  {listening ? (
+                    <MicOff className="size-4" />
+                  ) : (
+                    <Mic className="size-4" />
+                  )}
+                </Button>
+              )}
+
               <Button
                 size="icon"
                 type="submit"
@@ -393,6 +450,11 @@ export function ChatView() {
               </Button>
             </div>
 
+            {voiceError && (
+              <p role="alert" className="mx-auto mt-2 max-w-3xl text-center text-[10px] text-[#b14a4a]">
+                {voiceError}
+              </p>
+            )}
             {manualInvalid && (
               <p className="mx-auto mt-2 max-w-3xl text-center text-[10px] text-[#b14a4a]">
                 Select at least one agent in Manual Agents mode.

@@ -21,6 +21,8 @@ import type {
   StoredMessage,
   TaskDetail,
   TasksResponse,
+  VoiceSayResponse,
+  VoiceStatus,
   WorkflowCreatePayload,
   WorkflowData,
   WorkflowRunResponse,
@@ -364,5 +366,21 @@ export function resumeSchedule(scheduleId: string): Promise<Schedule> {
 export function cancelSchedule(scheduleId: string): Promise<Schedule> {
   return request<Schedule>(`/api/schedules/${scheduleId}`, {
     method: "DELETE",
+  });
+}
+
+// --- Voice bridge ---
+
+/** STT/TTS availability. Uninstalled is data, not an error. */
+export function getVoiceStatus(): Promise<VoiceStatus> {
+  return request<VoiceStatus>("/api/voice/status");
+}
+
+/** Synthesize speech for browser playback. Never executes anything —
+ * the desktop "say out loud" tool stays behind the approval ledger. */
+export function voiceSay(text: string): Promise<VoiceSayResponse> {
+  return request<VoiceSayResponse>("/api/voice/say", {
+    method: "POST",
+    body: JSON.stringify({ text }),
   });
 }

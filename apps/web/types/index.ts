@@ -373,3 +373,26 @@ export interface ScheduleCreateRequest {
   interval_seconds?: number;
   delay_seconds?: number;
 }
+
+// --- Voice bridge (optional backends, graceful degradation) ---
+
+export interface VoiceBackendStatus {
+  available: boolean;
+  backend: string;
+  install_hint: string | null;
+}
+
+export interface VoiceStatus {
+  stt: VoiceBackendStatus;
+  tts: VoiceBackendStatus;
+}
+
+/** POST /api/voice/say — audio for browser playback, or an honest
+ * "not installed" state. Never an execution, never a crash shape. */
+export interface VoiceSayResponse {
+  available: boolean;
+  audio_base64: string | null;
+  mime: string | null;
+  reason: string | null;
+  install_hint: string | null;
+}

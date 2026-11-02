@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Bot,
@@ -12,8 +12,9 @@ import {
   ShieldCheck,
   ThumbsDown,
   ThumbsUp,
+  Volume2,
 } from "lucide-react";
-import { saveToMemory, submitFeedback } from "@/services/api";
+import { getVoiceStatus, saveToMemory, submitFeedback, voiceSay } from "@/services/api";
 import type { ChatResponse } from "@/types";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/cn";
@@ -24,6 +25,18 @@ const shortNames: Record<string, string> = {
   critic: "Critic",
   memory: "Memory",
 };
+
+/** Server TTS availability is a deployment property — probe once, share
+ * the answer across every message bubble. Uninstalled renders no button. */
+let ttsProbe: Promise<boolean> | null = null;
+function ttsAvailableOnce(): Promise<boolean> {
+  if (!ttsProbe) {
+    ttsProbe = getVoiceStatus()
+      .then((status) => status.tts.available)
+      .catch(() => false);
+  }
+  return ttsProbe;
+}
 
 /** Parse a markdown-style link `[title](url)` into a React anchor, or return plain text. */
 function renderSource(source: string, index: number) {
@@ -54,6 +67,8 @@ export function AionMessage({
   const [copied, setCopied] = useState(false);
   const [reaction, setReaction] = useState<"up" | "down" | null>(null);
   const [saved, setSaved] = useState(false);
+  const [canSpeak, setCanSpeak] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
   const pending = response.pending_approval ?? null;
   // The backend prefixes the answer with a plain-text notice so every
   // consumer sees it. When we render the structured card we drop that
@@ -70,6 +85,26 @@ export function AionMessage({
     await navigator.clipboard.writeText(response.answer);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1400);
+  }
+
+  useEffect(() => {
+    void ttsAvailableOnce().then(setCanSpeak);
+  }, []);
+
+  async function speakAnswer() {
+    if (speaking) return;
+    setSpeaking(true);
+    try {
+      const result = await voiceSay(displayAnswer.slice(0, 1000));
+      if (result.available && result.audio_base64 && result.mime) {
+        new Audio(`data:${result.mime};base64,${result.audio_base64}`).play();
+      }
+      // Not available: silent degradation — the probe raced an uninstall.
+    } catch {
+      /* non-blocking */
+    } finally {
+      setSpeaking(false);
+    }
   }
 
   async function handleReaction(sentiment: "up" | "down") {
@@ -173,6 +208,17 @@ export function AionMessage({
             <RefreshCw className="size-3.5" />
             Regenerate
           </button>
+          {canSpeak && (
+            <button
+              type="button"
+              onClick={() => void speakAnswer()}
+              disabled={speaking}
+              aria-label="Read the answer aloud in the browser"
+              className="flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[10px] text-muted-text hover:bg-white">
+              <Volume2 className="size-3.5" />
+              {speaking ? "Speaking…" : "Speak"}
+            </button>
+          )}
           <button
             type="button"
             onClick={handleSaveToMemory}
