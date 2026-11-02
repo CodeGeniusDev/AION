@@ -11,6 +11,9 @@ Configuration keys (with defaults):
   voice.stt: "whisper" | "vosk" | "web"
   voice.tts: "edge" | "pyttsx3"
   browser.headless: true
+  browser.blocked_ports: [3000, 3001, 8000, 8010, 8080, 8443]
+  browser.allowlist: []   # empty = any (policy-conforming) host
+  browser.denylist: []    # always refused, even if allowlisted
   desktop.capture_enabled: true
   logs.level: "INFO"
   logs.file: "<workspace>/logs/aion_desktop.log"
@@ -44,6 +47,11 @@ DEFAULT_CONFIG: dict[str, Any] = {
     },
     "browser": {
         "headless": True,
+        # Loopback ports a browser action may never reach (the bridge,
+        # the API and the dev server live here).
+        "blocked_ports": [3000, 3001, 8000, 8010, 8080, 8443],
+        "allowlist": [],
+        "denylist": [],
     },
     "desktop": {
         "capture_enabled": True,

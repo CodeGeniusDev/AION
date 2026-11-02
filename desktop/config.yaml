@@ -18,10 +18,16 @@ voice:
   stt: "whisper" # "whisper" | "vosk" | "web"
   tts: "edge" # "edge" | "pyttsx3"
 
-# Browser automation (MVP-2)
+# Browser automation (Phase 4: Playwright behind the approval gate)
 browser:
-  headless: true # Set to false to see the browser open
+  headless: true # Set to false to see the browser open (config-only; requests cannot change this)
   default_path: "http://localhost:3000"
+  # Loopback ports the browser may never visit (bridge/API/dev server).
+  blocked_ports: [3000, 3001, 8000, 8010, 8080, 8443]
+  # Non-empty allowlist pins navigation to these hostnames only.
+  allowlist: []
+  # Denylist always wins: these hostnames are refused even if allowlisted.
+  denylist: []
 
 # Desktop control (MVP-2)
 desktop:
