@@ -12,6 +12,7 @@ from observability.logging_config import configure_logging, get_logger
 from routes.agents import router as agents_router
 from routes.approvals import router as approvals_router
 from routes.schedules import router as schedules_router
+from routes.voice import router as voice_router
 from routes.chat import router as chat_router
 from routes.alerts import router as alerts_router
 from routes.dashboard import router as dashboard_router
@@ -86,6 +87,7 @@ app.include_router(alerts_router, prefix="/api")
 app.include_router(desktop_router, prefix="/api")
 app.include_router(approvals_router, prefix="/api")
 app.include_router(schedules_router, prefix="/api")
+app.include_router(voice_router, prefix="/api")
 
 # Phase 5 scheduler: no-op unless AION_SCHEDULER_ENABLED=1. Fires create
 # PENDING approvals only — execution still requires a human decision.
