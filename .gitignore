@@ -22,3 +22,6 @@ MVP_BUILD.log
 # Playwright run artifacts
 apps/web/test-results/
 apps/web/playwright-report/
+
+# Desktop agent workspace (user files produced by approved actions — never commit)
+desktop/desktop_workspace/

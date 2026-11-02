@@ -12,7 +12,7 @@
 
 AION right now is a **smart AI command center**: agents talk to each other, verify each other's output, remember things, and handle chat/agents/tasks/memory. But it has three gaps:
 
-1. **Partial desktop control** — file operations and app launches now run through the approval-gated local bridge (chat → pending approval → human approves → executes once), but browser clicking, scheduling and social posting are not built yet.
+1. **Partial desktop control** — file operations and app launches now run through the approval-gated local bridge (chat → pending approval → human approves → executes once), and scheduled desktop actions fire as pending approvals at their time (Phase 5), but browser clicking and social posting are not built yet.
 2. **No social automation** — TikTok, Pinterest, and Facebook are manual today.
 3. **No voice assistant** — AION can "talk" but cannot yet "listen" and act on voice commands.
 
@@ -38,7 +38,7 @@ The fix is not a rewrite. It is a **glue layer**: a local Python agent (in the s
 | Auth                | Opt-in API-key auth (`AION_REQUIRE_AUTH`), tenant resolution                                         |
 | Rate limiting       | Per-IP + per-key rate limiter                                                                        |
 | Observability       | Request ID/correlation IDs, structured logging, metrics                                              |
-| Testing             | 428 backend tests + 42 desktop bridge/browser tests + 5 Playwright e2e smoke tests                           |
+| Testing             | 439 backend tests + 42 desktop bridge/browser tests + 5 Playwright e2e smoke tests                           |
 | Docker              | Compose for web + api                                                                                |
 | UI / responsiveness | Tailwind + Radix primitives; layout is mobile-responsive already (sidebar, top nav, responsive grid) |
 
@@ -58,7 +58,7 @@ The fix is not a rewrite. It is a **glue layer**: a local Python agent (in the s
 - Upload a file to a website
 - Post to Facebook / Instagram / TikTok / Pinterest — **planned via official APIs** (see MVP-3): Meta Graph API for Facebook/Instagram Pages, Pinterest API, TikTok Content Posting API (after app review). Requires a developer app + OAuth credentials from the owner.
 - Take voice commands
-- Run background tasks on a schedule
+- Run background tasks on a schedule **without approval** — scheduled desktop actions exist (Phase 5) but they only ever produce pending approvals; unattended execution is deliberately not a design goal
 
 ---
 
@@ -92,6 +92,7 @@ AION is the **brain**. The lower layer is the **hands**: tools that actually do 
 - [x] Add a `local_tools` registry mapping tool names → Python scripts / functions
 - [x] Chat → approval link (Phase 2): a chat message can *create* a pending approval for a protected desktop tool via the existing approval service. The model can never approve, execute, or see grant tokens — only the human queue (`/tasks` → `POST /api/approvals/{id}/approve`) executes. Gemini tool declarations remain calculator/text_analysis/current_datetime only.
 - [x] "Desktop" tab in the dashboard (Phase 3): approval queue, desktop task history with real output, bridge health indicator and recent audit events at `/desktop`
+- [x] Scheduler integration (Phase 5): interval/one-shot desktop actions persist in SQLite (`AION_SCHEDULE_DB_PATH`), survive restart, and at fire time create a PENDING approval through the same create-only path chat uses — the runner can never execute, approve or see grant tokens. Opt-in thread (`AION_SCHEDULER_ENABLED=1`), backpressure (one outstanding decision per schedule), tenant-scoped, managed at `/api/schedules` + the Desktop tab
 
 ### MVP-2 — Desktop automation (highest "wow")
 

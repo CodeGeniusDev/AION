@@ -123,3 +123,47 @@ so conflicts can be checked before merge.
 - `browser_click`/`browser_type` deliberately NOT exposed: they would need
   approval-gate registration + param-hash coverage + stateful sessions;
   documented as planned in docs/AION_MVP_PLAN.md
+
+## Phase 5 — Scheduler integration (pending approvals at fire time)
+
+Shipped. Scheduled desktop actions fire **only into the approval queue** —
+the runner is the least-powerful actor: it calls the same create-only
+`ApprovalService.request_execution` path chat uses and provably never
+touches the bridge, builds no grant, and cannot approve.
+
+- `apps/api/models/schedules.py` (NEW) — `Schedule` wire shape
+  (tenant-scoped, `next_run_at` nullable once finalized), create-request
+  with JSON-safe parameters and bounded interval/delay
+- `apps/api/memory/schedule_store.py` (NEW) — SQLite store mirroring the
+  Phase 1 workflow-store pattern; `CREATE TABLE IF NOT EXISTS` + safe
+  additive `tenant_id` migration; rows survive restart when
+  `AION_SCHEDULE_DB_PATH` points at a file
+- `apps/api/services/schedule_runner.py` (NEW) — clock-injectable `tick()`
+  (fake-clock tested), backpressure (one outstanding human decision per
+  schedule), unknown-tool fires pause instead of spinning; daemon thread
+  started only when `AION_SCHEDULER_ENABLED=1` — default behavior is
+  byte-for-byte unchanged
+- `apps/api/routes/schedules.py` (NEW) — CRUD + pause/resume/cancel under
+  the existing `get_current_principal`/role pattern; resume re-arms one
+  interval ahead (never bursts paused time); cross-tenant reads are 404
+- Shared files touched (Mahnoor): `apps/api/config.py`
+  (`schedule_db_path`, `scheduler_enabled`), `apps/api/main.py` (router
+  include + `start_scheduler_if_enabled()`), `apps/api/.env.example`
+  (both vars documented)
+- `apps/api/tests/test_schedules.py` (NEW, 11 tests) — fire creates
+  pending + bridge call count is zero, one-shot completion, recurring
+  reschedule, backpressure, tool-vanished pause, pause/resume, restart
+  persistence, tenant isolation, route contract + lifecycle. Backend
+  suite 428 → 439 tests.
+- Frontend: `types/index.ts` (Schedule types), `services/api.ts` (5
+  functions), `components/desktop/schedules-panel.tsx` (NEW — list,
+  create form, pause/resume/cancel, loading/error/empty states),
+  `desktop-view.tsx` mount + fixed the bridge hint text (`cli run`, not
+  `cli serve`), `status-badge.tsx` schedule statuses
+- Live E2E (raw output in the phase report): schedule → 1 s tick → pending
+  approval (params content-redacted) → nothing executed → human approve →
+  file written once → audit `requested(actor=scheduler, params_hash) →
+  approved → claimed → granted → executed`; wrong-path attempt correctly
+  refused by the workspace guard; backend restart preserved both rows
+- Gemini declarations and protected-tool policy untouched and still
+  test-proven; approval gate not weakened in any way
