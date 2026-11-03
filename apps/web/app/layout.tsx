@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { SidebarStateProvider } from "@/components/layout/sidebar-state-provider";
+import { PageSearchProvider } from "@/components/layout/page-search-provider";
 import { ThemeProvider } from "@/components/layout/theme-provider";
 import { ProfileProvider } from "@/components/profile/profile-provider";
 import "./globals.css";
@@ -27,7 +28,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body>
         <ThemeProvider>
           <ProfileProvider>
-            <SidebarStateProvider>{children}</SidebarStateProvider>
+            <SidebarStateProvider>
+              <PageSearchProvider>{children}</PageSearchProvider>
+            </SidebarStateProvider>
           </ProfileProvider>
         </ThemeProvider>
       </body>

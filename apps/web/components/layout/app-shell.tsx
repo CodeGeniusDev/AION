@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { Sidebar } from "./sidebar";
 import { useSidebarState } from "./sidebar-state-provider";
 import { TopNavigation } from "./top-navigation";
@@ -26,7 +26,9 @@ export function AppShell({ children }: AppShellProps) {
           <TopNavigation onMenuOpen={() => setMobileOpen(true)} />
           <main className="min-w-0 flex-1 p-3 pt-0 sm:p-4 sm:pt-0 lg:p-5 lg:pt-0">
             <div className="min-h-full overflow-hidden rounded-[24px] border border-border bg-surface shadow-[0_3px_18px_rgba(25,36,56,0.04)] sm:rounded-[28px]">
-              {children}
+              {/* Views read deep-link params (?open=, ?c=, …) via
+                  useSearchParams; the boundary keeps static rendering happy. */}
+              <Suspense fallback={null}>{children}</Suspense>
             </div>
           </main>
         </div>

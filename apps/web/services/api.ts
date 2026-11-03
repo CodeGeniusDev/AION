@@ -11,6 +11,7 @@ import type {
   ConversationSummary,
   DashboardData,
   DesktopHealth,
+  GlobalSearchResponse,
   HealthData,
   MemoryRecordsResponse,
   MemoryResponse,
@@ -50,10 +51,18 @@ async function request<T>(
 ): Promise<T> {
   const controller = new AbortController();
   const fetchInit = init ?? {};
-  window.setTimeout(
+  const timer = window.setTimeout(
     () => controller.abort(),
     fetchInit.timeout ?? DEFAULT_TIMEOUT_MS,
   );
+  // A caller-supplied signal (e.g. a stale search request being cancelled by
+  // a newer keystroke) aborts the fetch immediately.
+  const external = fetchInit.signal;
+  const onExternalAbort = () => controller.abort();
+  if (external) {
+    if (external.aborted) controller.abort();
+    else external.addEventListener("abort", onExternalAbort);
+  }
 
   try {
     const response = await fetch(`${API_URL}${path}`, {
@@ -64,7 +73,8 @@ async function request<T>(
     if (!response.ok) throw new Error(`AION API returned ${response.status}`);
     return (await response.json()) as T;
   } finally {
-    window.clearTimeout(fetchInit.timeout);
+    window.clearTimeout(timer);
+    external?.removeEventListener("abort", onExternalAbort);
   }
 }
 
@@ -115,6 +125,19 @@ export function runWorkflow(id: string, input: string): Promise<WorkflowRunRespo
 
 export function getResearch(): Promise<ResearchResponse> {
   return request<ResearchResponse>("/api/research");
+}
+
+/** GET /api/search (Phase 1E). Accepts an external AbortSignal so the
+ * header dropdown can cancel stale requests on every keystroke. */
+export function globalSearch(
+  query: string,
+  options?: { signal?: AbortSignal; limit?: number },
+): Promise<GlobalSearchResponse> {
+  const search = new URLSearchParams({ q: query });
+  if (options?.limit) search.set("limit", String(options.limit));
+  return request<GlobalSearchResponse>(`/api/search?${search.toString()}`, {
+    signal: options?.signal,
+  });
 }
 
 // --- Health ---

@@ -464,3 +464,33 @@ export interface VoiceSayResponse {
   reason: string | null;
   install_hint: string | null;
 }
+
+// --- Global search (Phase 1E) ---
+
+/** Mirrors apps/api/models/search.py — a pointer into an existing store. */
+export type GlobalSearchResultType =
+  | "task"
+  | "approval"
+  | "agent"
+  | "workflow"
+  | "memory"
+  | "conversation"
+  | "alert"
+  | "schedule";
+
+export interface GlobalSearchResult {
+  type: GlobalSearchResultType;
+  id: string;
+  title: string;
+  subtitle: string;
+  href: string;
+  snippet: string;
+  score: number;
+}
+
+export interface GlobalSearchResponse {
+  query: string;
+  total: number;
+  /** Grouped by source (tasks, approvals, …). Only non-empty groups. */
+  groups: Record<string, GlobalSearchResult[]>;
+}
