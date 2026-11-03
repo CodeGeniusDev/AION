@@ -91,7 +91,9 @@ export function DesktopView() {
       // Fetch task output for the most recent terminal rows so history
       // shows what actually happened, not just that it happened.
       const terminal = items
-        .filter((item) => item.status === "completed" || item.status === "failed")
+        .filter(
+          (item) => item.status === "completed" || item.status === "failed",
+        )
         .slice(0, OUTPUT_FETCH_LIMIT);
       const results = await Promise.allSettled(
         terminal.map((item) => getTask(item.task_id)),
@@ -102,7 +104,9 @@ export function DesktopView() {
         if (result.status !== "fulfilled") return;
         const output = result.value.output;
         next[task.task_id] = output
-          ? output.error ?? output.content ?? (output.success ? "success" : "failed")
+          ? (output.error ??
+            output.content ??
+            (output.success ? "success" : "failed"))
           : null;
       });
       setOutputs(next);
@@ -194,7 +198,10 @@ export function DesktopView() {
               <span className="text-sm font-medium">
                 Health check failed — the AION API is unreachable.
               </span>
-              <Button size="sm" variant="outline" onClick={() => void loadHealth()}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => void loadHealth()}>
                 Retry
               </Button>
             </>
@@ -209,14 +216,19 @@ export function DesktopView() {
                 )}
               />
               <span className="text-sm font-medium">
-                {health?.reachable ? "Agent bridge online" : "Agent bridge offline"}
+                {health?.reachable
+                  ? "Agent bridge online"
+                  : "Agent bridge offline"}
               </span>
               <span className="text-xs text-muted-text">
                 {health?.reachable
                   ? "Approved actions can dispatch now. Executions still require you here."
                   : "Start the desktop agent (`python -m aion_desktop.cli run`) — pending approvals stay safely queued until it returns."}
               </span>
-              <Activity className="ml-auto size-4 text-primary" aria-hidden="true" />
+              <Activity
+                className="ml-auto size-4 text-primary"
+                aria-hidden="true"
+              />
             </>
           )}
         </section>
@@ -254,7 +266,10 @@ export function DesktopView() {
                 title="Unable to load history"
                 description="AION could not reach the approvals ledger. Check that the backend is running, then retry."
                 action={
-                  <Button variant="outline" size="sm" onClick={() => void loadHistory()}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void loadHistory()}>
                     Retry
                   </Button>
                 }
@@ -277,7 +292,8 @@ export function DesktopView() {
                     id={`approval-row-${item.id}`}
                     className={cn(
                       "rounded-[16px] border p-4",
-                      approvalParam === item.id && "border-primary bg-soft-blue/40",
+                      approvalParam === item.id &&
+                        "border-primary bg-soft-blue/40",
                     )}>
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="text-sm font-semibold">{item.tool}</p>
@@ -314,7 +330,12 @@ export function DesktopView() {
           <SectionCard
             title="Recent audit events"
             description="Append-only trail: requested → approved → claimed → granted → executed. It can never be edited or deleted through the API."
-            action={<ScrollText className="size-4 text-muted-text" aria-hidden="true" />}>
+            action={
+              <ScrollText
+                className="size-4 text-muted-text"
+                aria-hidden="true"
+              />
+            }>
             {auditState === "loading" ? (
               <div aria-label="Loading audit events" className="space-y-3">
                 {[0, 1, 2].map((item) => (
@@ -326,7 +347,10 @@ export function DesktopView() {
                 title="Unable to load the audit trail"
                 description="AION could not reach the audit log. Check that the backend is running, then retry."
                 action={
-                  <Button variant="outline" size="sm" onClick={() => void loadAudit()}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void loadAudit()}>
                     Retry
                   </Button>
                 }

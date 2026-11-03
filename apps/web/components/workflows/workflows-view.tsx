@@ -31,7 +31,9 @@ function WorkflowForm({
   const [error, setError] = useState<string | null>(null);
 
   const toggleAgent = (agent: string) =>
-    setAgents((prev) => (prev.includes(agent) ? prev.filter((a) => a !== agent) : [...prev, agent]));
+    setAgents((prev) =>
+      prev.includes(agent) ? prev.filter((a) => a !== agent) : [...prev, agent],
+    );
 
   const submit = async () => {
     if (!name.trim() || agents.length === 0) {
@@ -41,10 +43,16 @@ function WorkflowForm({
     setSubmitting(true);
     setError(null);
     try {
-      await createWorkflow({ name: name.trim(), description: description.trim(), agents });
+      await createWorkflow({
+        name: name.trim(),
+        description: description.trim(),
+        agents,
+      });
       onCreated();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not create workflow.");
+      setError(
+        err instanceof Error ? err.message : "Could not create workflow.",
+      );
       setSubmitting(false);
     }
   };
@@ -53,7 +61,11 @@ function WorkflowForm({
     <div className="rounded-[24px] border bg-surface p-5 sm:p-6">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold">New workflow</h2>
-        <button type="button" onClick={onCancel} aria-label="Cancel" className="grid size-8 place-items-center rounded-full text-muted-text hover:bg-muted">
+        <button
+          type="button"
+          onClick={onCancel}
+          aria-label="Cancel"
+          className="grid size-8 place-items-center rounded-full text-muted-text hover:bg-muted">
           <X className="size-4" />
         </button>
       </div>
@@ -89,9 +101,10 @@ function WorkflowForm({
                 onClick={() => toggleAgent(agent)}
                 aria-pressed={active}
                 className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-                  active ? "border-primary bg-primary text-white" : "bg-muted text-muted-text hover:bg-muted"
-                }`}
-              >
+                  active
+                    ? "border-primary bg-primary text-white"
+                    : "bg-muted text-muted-text hover:bg-muted"
+                }`}>
                 {agent}
               </button>
             );
@@ -101,10 +114,16 @@ function WorkflowForm({
       {error ? <p className="mt-3 text-xs text-red-600">{error}</p> : null}
       <div className="mt-5 flex items-center gap-2">
         <Button size="sm" onClick={submit} disabled={submitting}>
-          {submitting ? <Loader2 className="mr-2 size-3.5 animate-spin" /> : null}
+          {submitting ? (
+            <Loader2 className="mr-2 size-3.5 animate-spin" />
+          ) : null}
           {submitting ? "Creating..." : "Create workflow"}
         </Button>
-        <Button size="sm" variant="outline" onClick={onCancel} disabled={submitting}>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={onCancel}
+          disabled={submitting}>
           Cancel
         </Button>
       </div>
@@ -113,17 +132,22 @@ function WorkflowForm({
 }
 
 function RunPanel({ result }: { result: WorkflowRunResult }) {
-  const tone = result.status === "completed" ? "text-success-text" : "text-red-600";
+  const tone =
+    result.status === "completed" ? "text-success-text" : "text-red-600";
   return (
     <div className="mt-4 rounded-[18px] bg-muted p-4 text-xs leading-5">
       <div className="flex items-center justify-between">
         <span className={`font-semibold ${tone}`}>{result.status}</span>
         <span className="text-muted-text">
-          {result.confidence ? `${Math.round(result.confidence * 100)}% confidence · ` : ""}
+          {result.confidence
+            ? `${Math.round(result.confidence * 100)}% confidence · `
+            : ""}
           {result.processing_time_ms} ms
         </span>
       </div>
-      <p className="mt-2 whitespace-pre-wrap text-muted-text">{result.error || result.answer}</p>
+      <p className="mt-2 whitespace-pre-wrap text-muted-text">
+        {result.error || result.answer}
+      </p>
     </div>
   );
 }
@@ -200,7 +224,9 @@ export function WorkflowsView() {
     setRunning(true);
     try {
       const response = await runWorkflow(id, runInput.trim());
-      setWorkflows((prev) => prev.map((w) => (w.id === id ? response.workflow : w)));
+      setWorkflows((prev) =>
+        prev.map((w) => (w.id === id ? response.workflow : w)),
+      );
       setResults((prev) => ({ ...prev, [id]: response.run }));
     } catch (err) {
       setRunError(err instanceof Error ? err.message : "Workflow run failed.");
@@ -216,8 +242,14 @@ export function WorkflowsView() {
         title="Workflows"
         description="Reusable paths that coordinate specialists from first request to reviewed result."
         action={
-          <Button onClick={() => setCreating((v) => !v)} disabled={creating ? false : loading || error}>
-            {creating ? <X className="mr-2 size-3.5" /> : <Plus className="mr-2 size-3.5" />}
+          <Button
+            onClick={() => setCreating((v) => !v)}
+            disabled={creating ? false : loading || error}>
+            {creating ? (
+              <X className="mr-2 size-3.5" />
+            ) : (
+              <Plus className="mr-2 size-3.5" />
+            )}
             {creating ? "Close" : "New Workflow"}
           </Button>
         }
@@ -225,20 +257,30 @@ export function WorkflowsView() {
       <div className="p-4 sm:p-6 lg:p-7">
         {creating ? (
           <div className="mb-5">
-            <WorkflowForm onCreated={refresh} onCancel={() => setCreating(false)} />
+            <WorkflowForm
+              onCreated={refresh}
+              onCancel={() => setCreating(false)}
+            />
           </div>
         ) : null}
 
         {loading ? (
-          <div aria-label="Loading workflows" className="grid gap-5 lg:grid-cols-3">
-            {[0, 1, 2].map((item) => <LoadingSkeleton key={item} className="h-[260px]" />)}
+          <div
+            aria-label="Loading workflows"
+            className="grid gap-5 lg:grid-cols-3">
+            {[0, 1, 2].map((item) => (
+              <LoadingSkeleton key={item} className="h-[260px]" />
+            ))}
           </div>
         ) : error ? (
           <EmptyState
             title="Unable to load data"
             description="AION could not reach the backend API. Check that the server is running, then retry."
             action={
-              <Button variant="outline" size="sm" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setLoadAttempt((attempt) => attempt + 1)}>
                 Retry
               </Button>
             }
@@ -247,7 +289,11 @@ export function WorkflowsView() {
           <EmptyState
             title="No workflows yet"
             description="Create your first reusable agent path to see it here."
-            action={<Button size="sm" onClick={() => setCreating(true)}>New Workflow</Button>}
+            action={
+              <Button size="sm" onClick={() => setCreating(true)}>
+                New Workflow
+              </Button>
+            }
           />
         ) : visibleWorkflows.length === 0 ? (
           <EmptyState
@@ -260,18 +306,31 @@ export function WorkflowsView() {
               const result = workflow.id ? results[workflow.id] : undefined;
               const isOpen = runningId === workflow.id;
               return (
-                <article key={workflow.id ?? workflow.name} className="flex flex-col rounded-[24px] border bg-surface p-5 sm:p-6">
+                <article
+                  key={workflow.id ?? workflow.name}
+                  className="flex flex-col rounded-[24px] border bg-surface p-5 sm:p-6">
                   <div className="flex items-start justify-between">
-                    <span className={`grid size-12 place-items-center rounded-[18px] ${index === 0 ? "bg-soft-blue" : index === 1 ? "bg-soft-peach" : "bg-soft-green"}`}>
-                      {index === 0 ? <Network className="size-5" /> : <Route className="size-5" />}
+                    <span
+                      className={`grid size-12 place-items-center rounded-[18px] ${index === 0 ? "bg-soft-blue" : index === 1 ? "bg-soft-peach" : "bg-soft-green"}`}>
+                      {index === 0 ? (
+                        <Network className="size-5" />
+                      ) : (
+                        <Route className="size-5" />
+                      )}
                     </span>
                     <StatusBadge status={workflow.state} />
                   </div>
-                  <h2 className="mt-5 text-lg font-semibold tracking-[-0.02em]">{workflow.name}</h2>
-                  <p className="mt-2 text-sm leading-6 text-muted-text">{workflow.description}</p>
+                  <h2 className="mt-5 text-lg font-semibold tracking-[-0.02em]">
+                    {workflow.name}
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-muted-text">
+                    {workflow.description}
+                  </p>
                   <div className="mt-5 flex flex-wrap gap-1.5">
                     {workflow.agents.map((agent, agentIndex) => (
-                      <span key={agent} className="rounded-full border bg-muted px-2.5 py-1 text-[10px] font-medium">
+                      <span
+                        key={agent}
+                        className="rounded-full border bg-muted px-2.5 py-1 text-[10px] font-medium">
                         {agentIndex + 1}. {agent}
                       </span>
                     ))}
@@ -286,13 +345,23 @@ export function WorkflowsView() {
                         placeholder="Describe the task for this run..."
                         className="w-full rounded-[16px] border px-3 py-2 text-sm"
                       />
-                      {runError ? <p className="mt-2 text-xs text-red-600">{runError}</p> : null}
+                      {runError ? (
+                        <p className="mt-2 text-xs text-red-600">{runError}</p>
+                      ) : null}
                       <div className="mt-2 flex items-center gap-2">
-                        <Button size="sm" onClick={() => submitRun(workflow.id!)} disabled={running}>
-                          {running ? <Loader2 className="mr-2 size-3.5 animate-spin" /> : null}
+                        <Button
+                          size="sm"
+                          onClick={() => submitRun(workflow.id!)}
+                          disabled={running}>
+                          {running ? (
+                            <Loader2 className="mr-2 size-3.5 animate-spin" />
+                          ) : null}
                           Run
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => setRunningId(null)}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setRunningId(null)}>
                           Close
                         </Button>
                       </div>
@@ -303,14 +372,18 @@ export function WorkflowsView() {
 
                   <div className="mt-auto flex items-center border-t pt-5 text-xs text-muted-text">
                     <span>{workflow.runs} total runs</span>
-                    <Tooltip content={workflow.id ? "Run this workflow" : "Unavailable"}>
+                    <Tooltip
+                      content={
+                        workflow.id ? "Run this workflow" : "Unavailable"
+                      }>
                       <button
                         type="button"
-                        onClick={() => (workflow.id ? startRun(workflow.id) : undefined)}
+                        onClick={() =>
+                          workflow.id ? startRun(workflow.id) : undefined
+                        }
                         disabled={!workflow.id}
                         className="ml-auto grid size-9 place-items-center rounded-full bg-primary text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-muted"
-                        aria-label={`Run ${workflow.name}`}
-                      >
+                        aria-label={`Run ${workflow.name}`}>
                         <ArrowUpRight className="size-4" />
                       </button>
                     </Tooltip>

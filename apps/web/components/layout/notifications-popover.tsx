@@ -144,7 +144,11 @@ export function NotificationsPopover() {
                   return (
                     <li key={alert.id} className="group relative">
                       <Link
-                        href={alert.link ?? CATEGORY_ROUTE[alert.category] ?? "/alert"}
+                        href={
+                          alert.link ??
+                          CATEGORY_ROUTE[alert.category] ??
+                          "/alert"
+                        }
                         onClick={() => void openAlert(alert, close)}
                         className={cn(
                           "flex w-full gap-3 px-4 py-3 pr-10 text-left transition-colors hover:bg-muted",

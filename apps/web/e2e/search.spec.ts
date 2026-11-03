@@ -37,9 +37,9 @@ test.describe("Phase 1E: Global search", () => {
     const probe = await (
       await request.get(`${API}/api/search`, { params: { q: term } })
     ).json();
-    const rows = Object.values<{ href: string; title: string; snippet: string }[]>(
-      probe.groups,
-    ).flat();
+    const rows = Object.values<
+      { href: string; title: string; snippet: string }[]
+    >(probe.groups).flat();
     test.skip(rows.length === 0, `No real row matches "${term}".`);
     const target = rows[0];
 
@@ -73,7 +73,10 @@ test.describe("Phase 1E: Global search", () => {
     await page.keyboard.press("Control+k");
     const input = page.getByRole("combobox", { name: "Search AION" });
     await input.fill("New workflow");
-    await page.getByRole("option", { name: /New workflow/ }).first().click();
+    await page
+      .getByRole("option", { name: /New workflow/ })
+      .first()
+      .click();
     await expect(page).toHaveURL(/\/workflows\?new=1/);
     await expect(
       page.getByRole("heading", { name: "New workflow" }),
@@ -87,7 +90,10 @@ test.describe("Phase 1E: Global search", () => {
     await page.keyboard.press("Control+k");
     const input = page.getByRole("combobox", { name: "Search AION" });
     await input.fill("settings");
-    await page.getByRole("option", { name: /Settings/ }).first().click();
+    await page
+      .getByRole("option", { name: /Settings/ })
+      .first()
+      .click();
     await expect(page).toHaveURL(/\/settings/);
 
     await page.goto("/dashboard");
@@ -96,8 +102,8 @@ test.describe("Phase 1E: Global search", () => {
     await expect(chip).toBeVisible();
     await page.getByRole("button", { name: "Clear" }).click();
     await expect(chip).toHaveCount(0);
-    const stored = await page.evaluate(
-      () => localStorage.getItem("aion-recent-searches"),
+    const stored = await page.evaluate(() =>
+      localStorage.getItem("aion-recent-searches"),
     );
     expect(stored).toBeNull();
   });
@@ -140,7 +146,9 @@ test.describe("Phase 1E: Global search", () => {
     );
     const convo = conversations[0];
     const messages = await (
-      await request.get(`${API}/api/conversations/${convo.conversation_id}/messages`)
+      await request.get(
+        `${API}/api/conversations/${convo.conversation_id}/messages`,
+      )
     ).json();
     test.skip(messages.length === 0, "Conversation has no messages.");
     const text: string = messages[0].content;

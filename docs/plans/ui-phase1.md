@@ -6,7 +6,7 @@ Discipline: inspect → plan → small conventional commits, each passing gates.
 ## 1A Audit — baseline evidence (raw counts)
 
 - Hardcoded white/hex color sites (`grep -rnE "bg-white|bg-\[#|text-\[#|border-\[#|#[0-9a-fA-F]{6}" apps/web/components apps/web/app`): **120 sites in 21 files**.
-  - Of these, **65 are in `app/globals.css`** and are *legitimate* — they are the token
+  - Of these, **65 are in `app/globals.css`** and are _legitimate_ — they are the token
     definitions themselves (`:root` + `[data-theme=…]` blocks). The real sweep target is
     the remaining **55 sites in 20 component/page files** → must reach ~0.
   - Top offenders after globals.css: `chat/aion-message.tsx` (9), `desktop/desktop-view.tsx` (6),
@@ -14,10 +14,10 @@ Discipline: inspect → plan → small conventional commits, each passing gates.
 - Header controls today (`components/layout/top-navigation.tsx`): mobile menu (works,
   opens drawer), GlobalSearch (works, ⌘K + keyboard nav — client-side, to be upgraded to
   `/api/search` in 1E), theme toggle (works, `useTheme` — needs monitor icon for system
-  + Settings/Profile same hook), NotificationsPopover (works, real `/api/alerts` — needs
-  created_at/link/deep-links/relative-time/useNotifications in 1C), Settings link (works,
-  hidden below `md` — must be reachable via user menu on mobile), ProfileMenu (works,
-  real workspace name — replaced by /api/profile data in 1D).
+  - Settings/Profile same hook), NotificationsPopover (works, real `/api/alerts` — needs
+    created_at/link/deep-links/relative-time/useNotifications in 1C), Settings link (works,
+    hidden below `md` — must be reachable via user menu on mobile), ProfileMenu (works,
+    real workspace name — replaced by /api/profile data in 1D).
 - Routes: `/profile` **exists** (app/profile/page.tsx + components/profile/profile-view.tsx,
   built on /api/settings + /health — to be rebuilt on /api/profile in 1D). Backend has
   `/api/alerts`, `/api/settings`, `/api/conversations` (list), `/api/memories/records/search`.
@@ -33,7 +33,7 @@ Discipline: inspect → plan → small conventional commits, each passing gates.
 ## 1B Theme system
 
 - Tokens already exist in globals.css (`--surface/--shell/--sidebar/--border/--text/
-  --muted-text/--primary/soft-*` + dark block) and tailwind mapping. Finish the list:
+--muted-text/--primary/soft-*` + dark block) and tailwind mapping. Finish the list:
   surface-2, scrollbar, progress track, input/select/placeholder, status colors;
   `color-scheme` via `:root[data-theme]`.
 - Replace all 55 component hex/white sites with tokens (justify remainders: shadow
@@ -119,7 +119,7 @@ Backend new: routes/search.py, routes/profile.py, memory/profile_store.py,
 security/redaction.py + tests. Backend edits: models/settings.py (Literal, done),
 models/notifications.py (+created_at/link), models/chat.py (+warnings), routes/alerts.py,
 routes/chat.py (redaction), routes/settings.py (persist), main.py (2 routers),
-memory/alert_store.py (link on create), services/* (alert link sites), conftest.py.
+memory/alert_store.py (link on create), services/\* (alert link sites), conftest.py.
 Frontend new: hooks/useNotifications.ts, hooks/usePageSearch.ts, providers/
 profile-provider.tsx, e2e specs. Frontend edits: all 20 hex-offender files, header
 components, profile page, settings view, deep-link pages, types/index.ts, services/api.ts.

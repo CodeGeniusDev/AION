@@ -122,7 +122,8 @@ interface WorkspaceStats {
 
 const inputClass =
   "mt-2 h-11 w-full rounded-full border bg-surface px-4 text-sm text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
-const invalidClass = "border-destructive focus:border-destructive focus:ring-destructive/20";
+const invalidClass =
+  "border-destructive focus:border-destructive focus:ring-destructive/20";
 const fieldHintClass = "mt-1 text-[11px] text-muted-text";
 const fieldErrorClass = "mt-1.5 text-xs text-destructive";
 
@@ -194,7 +195,10 @@ export function ProfileView() {
           tasksFailed: dashboard.task_counts?.failed ?? 0,
           approvalsApproved: approved.total,
           approvalsRejected: rejected.total,
-          workflowRuns: workflows.items.reduce((sum, w) => sum + (w.runs || 0), 0),
+          workflowRuns: workflows.items.reduce(
+            (sum, w) => sum + (w.runs || 0),
+            0,
+          ),
           memoryRecords:
             dashboard.memory_stats?.total_records ?? dashboard.saved_memories,
           conversations: conversations.length,
@@ -385,7 +389,11 @@ export function ProfileView() {
               "grid size-20 shrink-0 place-items-center rounded-full text-2xl font-semibold text-white shadow-md",
               AVATAR_CLASS[form.avatar_color],
             )}>
-            {trimmedName ? initialsFrom(trimmedName) : <UserRound className="size-8" />}
+            {trimmedName ? (
+              initialsFrom(trimmedName)
+            ) : (
+              <UserRound className="size-8" />
+            )}
           </span>
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-2xl font-bold tracking-tight text-foreground">
@@ -626,12 +634,18 @@ export function ProfileView() {
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  <StatTile label="Tasks total" value={String(stats.tasksTotal)} />
+                  <StatTile
+                    label="Tasks total"
+                    value={String(stats.tasksTotal)}
+                  />
                   <StatTile
                     label="Tasks completed"
                     value={String(stats.tasksCompleted)}
                   />
-                  <StatTile label="Tasks failed" value={String(stats.tasksFailed)} />
+                  <StatTile
+                    label="Tasks failed"
+                    value={String(stats.tasksFailed)}
+                  />
                   <StatTile
                     label="Approvals approved"
                     value={String(stats.approvalsApproved)}
@@ -652,10 +666,7 @@ export function ProfileView() {
                     label="Conversations"
                     value={String(stats.conversations)}
                   />
-                  <StatTile
-                    label="Member since"
-                    value={memberSince ?? "—"}
-                  />
+                  <StatTile label="Member since" value={memberSince ?? "—"} />
                 </div>
               )}
             </SectionCard>
@@ -704,7 +715,10 @@ export function ProfileView() {
                       : "Unknown (API offline)"
                   }
                 />
-                <InfoRow label="Tenant isolation" value="default (Single-tenant)" />
+                <InfoRow
+                  label="Tenant isolation"
+                  value="default (Single-tenant)"
+                />
               </dl>
             </SectionCard>
 

@@ -51,7 +51,10 @@ export function redactSecrets(input: string): ClientRedaction {
   ) => {
     text = text.replace(
       pattern,
-      (match: string, ...args: (string | number | Record<string, string> | undefined)[]) => {
+      (
+        match: string,
+        ...args: (string | number | Record<string, string> | undefined)[]
+      ) => {
         const groups = args.slice(0, -1) as (string | undefined)[];
         // Keyword pattern captures only the VALUE — keep the benign keyword.
         if (valueOf && groups.length > 0) {
@@ -75,11 +78,14 @@ export function redactSecrets(input: string): ClientRedaction {
   // Base64 blobs that look like ordinary compressed prose stay untouched,
   // same heuristic as the server (no lowercase run longer than five).
   text = text.replace(B64, (match) =>
-    /[a-z]{6}/.test(match) ? match : (kinds.add("secret"), "[REDACTED: secret]"),
+    /[a-z]{6}/.test(match)
+      ? match
+      : (kinds.add("secret"), "[REDACTED: secret]"),
   );
   text = text.replace(CARD, (match) => {
     const digits = match.replace(/[ -]/g, "");
-    if (digits.length < 13 || digits.length > 19 || !luhnValid(digits)) return match;
+    if (digits.length < 13 || digits.length > 19 || !luhnValid(digits))
+      return match;
     kinds.add("card number");
     return "[REDACTED: card number]";
   });

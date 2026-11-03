@@ -1,6 +1,13 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useSearchParams } from "next/navigation";
 import {
   MessageCircleMore,
@@ -37,7 +44,11 @@ import { ModeSelector } from "./mode-selector";
 import { ProcessingState } from "./processing-state";
 import { cn } from "@/utils/cn";
 import { redactSecrets } from "@/utils/redaction";
-import { speechRecognitionSupported, startDictation, type Dictation } from "@/utils/speech";
+import {
+  speechRecognitionSupported,
+  startDictation,
+  type Dictation,
+} from "@/utils/speech";
 
 export function ChatView() {
   const { configured, profile } = useProfile();
@@ -222,7 +233,7 @@ export function ChatView() {
         setErrorDetail(
           err instanceof Error && err.message !== "workflow_failed"
             ? `Network error: ${err.message}`
-            : "Could not reach the AION backend. Please check that the server is running."
+            : "Could not reach the AION backend. Please check that the server is running.",
         );
       }
       setFailedPrompt(value);
@@ -380,7 +391,8 @@ export function ChatView() {
               <ShieldAlert className="mt-0.5 size-4 shrink-0 text-destructive" />
               <div className="min-w-0 flex-1">
                 <p className="font-semibold text-foreground">
-                  Credentials detected and removed ({securityWarnings.join(", ")}).
+                  Credentials detected and removed (
+                  {securityWarnings.join(", ")}).
                 </p>
                 <p className="mt-0.5 text-xs text-muted-text">
                   AION never needs your password; use official OAuth. Change
@@ -501,9 +513,12 @@ export function ChatView() {
                   variant="outline"
                   onClick={toggleDictation}
                   aria-pressed={listening}
-                  aria-label={listening ? "Stop dictating" : "Dictate a message"}
+                  aria-label={
+                    listening ? "Stop dictating" : "Dictate a message"
+                  }
                   className={cn(
-                    listening && "border-danger-border bg-danger-soft text-danger-text animate-pulse",
+                    listening &&
+                      "border-danger-border bg-danger-soft text-danger-text animate-pulse",
                   )}>
                   {listening ? (
                     <MicOff className="size-4" />
@@ -523,7 +538,9 @@ export function ChatView() {
             </div>
 
             {voiceError && (
-              <p role="alert" className="mx-auto mt-2 max-w-3xl text-center text-[10px] text-danger-text">
+              <p
+                role="alert"
+                className="mx-auto mt-2 max-w-3xl text-center text-[10px] text-danger-text">
                 {voiceError}
               </p>
             )}

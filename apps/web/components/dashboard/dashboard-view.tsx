@@ -51,7 +51,7 @@ export function DashboardView() {
   const visibleTasks = useMemo(
     () =>
       filter === "all"
-        ? data?.recent_tasks ?? []
+        ? (data?.recent_tasks ?? [])
         : (data?.recent_tasks ?? []).filter((task) => task.status === filter),
     [data, filter],
   );
@@ -61,9 +61,7 @@ export function DashboardView() {
       <PageHeader
         eyebrow="Command center"
         title={
-          configured && profile
-            ? `Hello, ${firstNameOf(profile)}`
-            : "Hello"
+          configured && profile ? `Hello, ${firstNameOf(profile)}` : "Hello"
         }
         description="Manage your Artificial Intelligence Operating Nervous System."
       />
@@ -71,8 +69,7 @@ export function DashboardView() {
         {loading ? (
           <div
             aria-label="Loading dashboard"
-            className="grid gap-5 lg:grid-cols-[minmax(0,1.9fr)_minmax(280px,1fr)]"
-          >
+            className="grid gap-5 lg:grid-cols-[minmax(0,1.9fr)_minmax(280px,1fr)]">
             <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {[0, 1, 2].map((item) => (
                 <LoadingSkeleton key={item} className="h-[190px]" />
@@ -86,7 +83,10 @@ export function DashboardView() {
             title="Unable to load data"
             description="AION could not reach the backend API. Check that the server is running, then retry."
             action={
-              <Button variant="outline" size="sm" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setLoadAttempt((attempt) => attempt + 1)}>
                 Retry
               </Button>
             }
@@ -116,8 +116,7 @@ export function DashboardView() {
               </div>
               <section
                 id="recent-tasks"
-                className="min-w-0 rounded-[24px] border bg-surface p-5 sm:p-6"
-              >
+                className="min-w-0 rounded-[24px] border bg-surface p-5 sm:p-6">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <h2 className="text-lg font-semibold tracking-[-0.02em]">
@@ -140,8 +139,7 @@ export function DashboardView() {
                           filter === item
                             ? "bg-surface text-aion-text shadow-sm"
                             : "text-muted-text hover:text-aion-text",
-                        )}
-                      >
+                        )}>
                         {item}
                       </button>
                     ))}

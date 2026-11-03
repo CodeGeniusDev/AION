@@ -26,9 +26,7 @@ test.describe("Phase 1: Global Shell & Header Controls", () => {
       page.getByRole("heading", { name: "Appearance" }),
     ).toBeVisible();
     // Notification toggles live ONLY in Settings (Profile links there).
-    await expect(
-      page.getByLabel("Notify on task completions"),
-    ).toHaveCount(0);
+    await expect(page.getByLabel("Notify on task completions")).toHaveCount(0);
     await expect(
       page.getByRole("link", { name: "Open Settings" }),
     ).toBeVisible();

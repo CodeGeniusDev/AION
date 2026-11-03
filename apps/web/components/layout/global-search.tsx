@@ -144,7 +144,12 @@ export function GlobalSearch({ className }: { className?: string }) {
           inputRef.current?.select();
         });
         setOpen(true);
-      } else if (event.key === "/" && !typing && !event.metaKey && !event.ctrlKey) {
+      } else if (
+        event.key === "/" &&
+        !typing &&
+        !event.metaKey &&
+        !event.ctrlKey
+      ) {
         event.preventDefault();
         enterOverlay();
         requestAnimationFrame(() => inputRef.current?.focus());
@@ -168,7 +173,11 @@ export function GlobalSearch({ className }: { className?: string }) {
       if (stored) {
         const parsed: unknown = JSON.parse(stored);
         if (Array.isArray(parsed)) {
-          setRecent(parsed.filter((item): item is string => typeof item === "string").slice(0, 8));
+          setRecent(
+            parsed
+              .filter((item): item is string => typeof item === "string")
+              .slice(0, 8),
+          );
         }
       }
     } catch {
@@ -179,7 +188,10 @@ export function GlobalSearch({ className }: { className?: string }) {
   function rememberSearch(term: string) {
     if (!term) return;
     setRecent((current) => {
-      const next = [term, ...current.filter((item) => item !== term)].slice(0, 8);
+      const next = [term, ...current.filter((item) => item !== term)].slice(
+        0,
+        8,
+      );
       try {
         localStorage.setItem(RECENT_KEY, JSON.stringify(next));
       } catch {
@@ -191,7 +203,10 @@ export function GlobalSearch({ className }: { className?: string }) {
 
   // Debounce typing to one request per pause, cancelling any stale one.
   useEffect(() => {
-    const timer = window.setTimeout(() => setDebounced(query.trim()), DEBOUNCE_MS);
+    const timer = window.setTimeout(
+      () => setDebounced(query.trim()),
+      DEBOUNCE_MS,
+    );
     return () => window.clearTimeout(timer);
   }, [query]);
 
@@ -238,7 +253,11 @@ export function GlobalSearch({ className }: { className?: string }) {
         local.push({ name: "Pages", label: "Pages", items: pageRows });
       }
       if (actionRows.length > 0) {
-        local.push({ name: "Quick actions", label: "Quick actions", items: actionRows });
+        local.push({
+          name: "Quick actions",
+          label: "Quick actions",
+          items: actionRows,
+        });
       }
 
       // "This page" scope: the pages below the shell do the filtering, so no
@@ -253,7 +272,9 @@ export function GlobalSearch({ className }: { className?: string }) {
       controllerRef.current = controller;
       setLoading(true);
       try {
-        const response = await globalSearch(term, { signal: controller.signal });
+        const response = await globalSearch(term, {
+          signal: controller.signal,
+        });
         if (controller.signal.aborted) return;
         const apiCategories: Category[] = Object.entries(response.groups).map(
           ([key, results]) => ({
@@ -271,7 +292,8 @@ export function GlobalSearch({ className }: { className?: string }) {
         );
         setCategories([...local, ...apiCategories]);
       } catch (err) {
-        if (controller.signal.aborted || (err as Error)?.name === "AbortError") return;
+        if (controller.signal.aborted || (err as Error)?.name === "AbortError")
+          return;
         setCategories(local);
         setError("Search is unavailable — the AION API is not reachable.");
       } finally {

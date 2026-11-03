@@ -2,7 +2,15 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { ArrowUpRight, BrainCircuit, Database, HardDrive, Search, Trash2, X } from "lucide-react";
+import {
+  ArrowUpRight,
+  BrainCircuit,
+  Database,
+  HardDrive,
+  Search,
+  Trash2,
+  X,
+} from "lucide-react";
 import {
   deleteMemoryRecord,
   getMemory,
@@ -40,7 +48,10 @@ export function MemoryView() {
   const [highlightId, setHighlightId] = useState<string | null>(null);
 
   const visibleCategories = useMemo(
-    () => categories.filter((category) => matches(category.title, category.description)),
+    () =>
+      categories.filter((category) =>
+        matches(category.title, category.description),
+      ),
     [categories, matches],
   );
 
@@ -66,24 +77,21 @@ export function MemoryView() {
     };
   }, [loadAttempt]);
 
-  const loadRecords = useCallback(
-    async (query?: string) => {
-      setRecordsLoading(true);
-      try {
-        const result = query
-          ? await searchMemoryRecords(query, { limit: 50 })
-          : await listMemoryRecords({ limit: 50 });
-        setRecords(result.items);
-        setRecordsTotal(result.total);
-      } catch {
-        setRecords([]);
-        setRecordsTotal(0);
-      } finally {
-        setRecordsLoading(false);
-      }
-    },
-    [],
-  );
+  const loadRecords = useCallback(async (query?: string) => {
+    setRecordsLoading(true);
+    try {
+      const result = query
+        ? await searchMemoryRecords(query, { limit: 50 })
+        : await listMemoryRecords({ limit: 50 });
+      setRecords(result.items);
+      setRecordsTotal(result.total);
+    } catch {
+      setRecords([]);
+      setRecordsTotal(0);
+    } finally {
+      setRecordsLoading(false);
+    }
+  }, []);
 
   function openRecords() {
     setShowRecords(true);
@@ -205,9 +213,7 @@ export function MemoryView() {
               description="How AION decides what context should be retained.">
               <div className="grid gap-3 sm:grid-cols-3">
                 {policies.map((item, index) => (
-                  <div
-                    key={item}
-                    className="rounded-[18px] bg-muted p-4">
+                  <div key={item} className="rounded-[18px] bg-muted p-4">
                     <span className="text-[10px] font-semibold text-primary">
                       0{index + 1}
                     </span>
@@ -235,9 +241,7 @@ export function MemoryView() {
                     <X className="size-4" />
                   </button>
                 </div>
-                <form
-                  onSubmit={handleSearch}
-                  className="mt-4 flex gap-2">
+                <form onSubmit={handleSearch} className="mt-4 flex gap-2">
                   <label className="relative flex-1">
                     <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-text" />
                     <span className="sr-only">Search memory</span>
@@ -281,7 +285,9 @@ export function MemoryView() {
                                 {record.verification_state}
                               </span>
                               <span className="ml-auto text-[9px] text-muted-text">
-                                {new Date(record.created_at).toLocaleDateString()}
+                                {new Date(
+                                  record.created_at,
+                                ).toLocaleDateString()}
                               </span>
                             </div>
                             <p className="mt-1 text-xs leading-5">
@@ -297,9 +303,7 @@ export function MemoryView() {
                           </div>
                           <button
                             type="button"
-                            onClick={() =>
-                              void handleDelete(record.memory_id)
-                            }
+                            onClick={() => void handleDelete(record.memory_id)}
                             className="shrink-0 rounded p-1 text-muted-text hover:text-danger-text"
                             aria-label={`Delete record ${record.memory_id}`}>
                             <Trash2 className="size-3.5" />

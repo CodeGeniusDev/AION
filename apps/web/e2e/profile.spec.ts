@@ -39,7 +39,10 @@ test.describe("Phase 1D: Profile single source of truth", () => {
     request,
   }) => {
     const body = await (await request.get(`${API}/api/profile`)).json();
-    test.skip(body.configured, "A profile is already configured; setup state not applicable.");
+    test.skip(
+      body.configured,
+      "A profile is already configured; setup state not applicable.",
+    );
 
     await page.goto("/profile");
     await expect(
@@ -67,9 +70,7 @@ test.describe("Phase 1D: Profile single source of truth", () => {
       name: "Workspace statistics",
     });
     await expect(heading).toBeVisible();
-    const statsSection = heading.locator(
-      "xpath=ancestor::section[1]",
-    );
+    const statsSection = heading.locator("xpath=ancestor::section[1]");
     // The tasks total tile must equal the real store value — never a demo number.
     const totalValue = statsSection
       .getByText("Tasks total", { exact: true })

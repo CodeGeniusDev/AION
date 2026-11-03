@@ -63,7 +63,9 @@ export function AlertView() {
     () =>
       alerts
         .filter((alert) => filter === "all" || alert.unread)
-        .filter((alert) => matches(alert.title, alert.description, alert.category)),
+        .filter((alert) =>
+          matches(alert.title, alert.description, alert.category),
+        ),
     [alerts, filter, matches],
   );
 

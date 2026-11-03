@@ -88,19 +88,22 @@ export function useNotifications(): UseNotifications {
     };
   }, [refresh]);
 
-  const markRead = useCallback(async (alert: AlertItem) => {
-    if (!alert.unread) return;
-    revision.current += 1;
-    setAlerts((prev) =>
-      prev.map((a) => (a.id === alert.id ? { ...a, unread: false } : a)),
-    );
-    setUnreadCount((n) => Math.max(0, n - 1));
-    try {
-      await markAlertsRead([alert.id]);
-    } catch {
-      void refresh();
-    }
-  }, [refresh]);
+  const markRead = useCallback(
+    async (alert: AlertItem) => {
+      if (!alert.unread) return;
+      revision.current += 1;
+      setAlerts((prev) =>
+        prev.map((a) => (a.id === alert.id ? { ...a, unread: false } : a)),
+      );
+      setUnreadCount((n) => Math.max(0, n - 1));
+      try {
+        await markAlertsRead([alert.id]);
+      } catch {
+        void refresh();
+      }
+    },
+    [refresh],
+  );
 
   const markAllRead = useCallback(async () => {
     revision.current += 1;
@@ -113,17 +116,29 @@ export function useNotifications(): UseNotifications {
     }
   }, [refresh]);
 
-  const remove = useCallback(async (alert: AlertItem) => {
-    const wasUnread = alert.unread;
-    revision.current += 1;
-    setAlerts((prev) => prev.filter((a) => a.id !== alert.id));
-    if (wasUnread) setUnreadCount((n) => Math.max(0, n - 1));
-    try {
-      await deleteAlert(alert.id);
-    } catch {
-      void refresh();
-    }
-  }, [refresh]);
+  const remove = useCallback(
+    async (alert: AlertItem) => {
+      const wasUnread = alert.unread;
+      revision.current += 1;
+      setAlerts((prev) => prev.filter((a) => a.id !== alert.id));
+      if (wasUnread) setUnreadCount((n) => Math.max(0, n - 1));
+      try {
+        await deleteAlert(alert.id);
+      } catch {
+        void refresh();
+      }
+    },
+    [refresh],
+  );
 
-  return { alerts, unreadCount, loading, error, refresh, markRead, markAllRead, remove };
+  return {
+    alerts,
+    unreadCount,
+    loading,
+    error,
+    refresh,
+    markRead,
+    markAllRead,
+    remove,
+  };
 }

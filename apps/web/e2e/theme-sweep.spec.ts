@@ -52,7 +52,10 @@ async function auditTheme(
       let node: Element | null = el;
       while (node) {
         const [r, g, b, a] = parse(getComputedStyle(node).backgroundColor);
-        if (a === 1 && !(r === 0 && g === 0 && b === 0 && node !== document.body)) {
+        if (
+          a === 1 &&
+          !(r === 0 && g === 0 && b === 0 && node !== document.body)
+        ) {
           // treat fully-opaque non-transparent bg; body fallback below
           if (getComputedStyle(node).backgroundColor !== "rgba(0, 0, 0, 0)") {
             return [r, g, b];
@@ -78,12 +81,20 @@ async function auditTheme(
       if (rect.width * rect.height < 20000) continue;
       const l = lum(r, g, b);
       if (isDark && l > 0.8) {
-        surfaces.push({ sel: sel(el), lum: Number(l.toFixed(3)), bg: style.backgroundColor });
+        surfaces.push({
+          sel: sel(el),
+          lum: Number(l.toFixed(3)),
+          bg: style.backgroundColor,
+        });
       }
     }
 
     // Body text contrast — leaf text nodes with a real font size.
-    for (const el of Array.from(document.querySelectorAll("p, span, li, label, h1, h2, h3, a, button, td, th"))) {
+    for (const el of Array.from(
+      document.querySelectorAll(
+        "p, span, li, label, h1, h2, h3, a, button, td, th",
+      ),
+    )) {
       const textContent = (el.textContent || "").trim();
       if (textContent.length < 3) continue;
       const rect = el.getBoundingClientRect();
@@ -121,9 +132,12 @@ for (const theme of ["dark", "light"] as const) {
       test(`${route} — surfaces & contrast`, async ({ page }) => {
         await page.goto(route);
         await expect
-          .poll(() => page.evaluate(() => document.documentElement.dataset.theme), {
-            timeout: 10_000,
-          })
+          .poll(
+            () => page.evaluate(() => document.documentElement.dataset.theme),
+            {
+              timeout: 10_000,
+            },
+          )
           .toBe(theme);
         await page.screenshot({
           path: `test-results/screenshots/${theme}-${name}.png`,

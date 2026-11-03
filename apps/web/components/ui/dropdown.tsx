@@ -86,7 +86,11 @@ export function Dropdown({
       );
     focusables()[0]?.focus();
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key !== "Tab" && event.key !== "ArrowDown" && event.key !== "ArrowUp")
+      if (
+        event.key !== "Tab" &&
+        event.key !== "ArrowDown" &&
+        event.key !== "ArrowUp"
+      )
         return;
       const items = focusables();
       if (items.length === 0) return;

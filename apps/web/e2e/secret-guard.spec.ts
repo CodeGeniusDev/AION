@@ -29,12 +29,16 @@ test.describe("Phase 1F: Secret Guard", () => {
     // Scoped to the chat area; the sidebar conversation list legitimately
     // titles the same exchange.
     await expect(
-      page.getByText("password is [REDACTED: password]", { exact: false }).first(),
+      page
+        .getByText("password is [REDACTED: password]", { exact: false })
+        .first(),
     ).toBeVisible();
     await expect(page.locator("body")).not.toContainText("Sup3rSecret123");
 
     // The banner is dismissible.
-    await page.getByRole("button", { name: "Dismiss security warning" }).click();
+    await page
+      .getByRole("button", { name: "Dismiss security warning" })
+      .click();
     await expect(banner).toHaveCount(0);
   });
 
