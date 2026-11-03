@@ -142,6 +142,10 @@ export interface ChatResponse {
   // Phase 2: present when the message queued a pending desktop approval.
   // Optional so reconstructed history (no live approval) stays type-safe.
   pending_approval?: PendingApprovalInfo | null;
+  // Phase 1F: kinds of credentials the backend stripped from the message
+  // before storing or sending it ("password removed", …). Additive —
+  // older responses and rebuilt history simply omit it.
+  warnings?: string[];
 }
 
 export type ChatMessage =

@@ -8,9 +8,11 @@ import {
   MicOff,
   Plus,
   Send,
+  ShieldAlert,
   Sparkles,
   Trash2,
   UserRound,
+  X,
 } from "lucide-react";
 import {
   deleteConversation,
@@ -34,6 +36,7 @@ import { ChatErrorState } from "./chat-error-state";
 import { ModeSelector } from "./mode-selector";
 import { ProcessingState } from "./processing-state";
 import { cn } from "@/utils/cn";
+import { redactSecrets } from "@/utils/redaction";
 import { speechRecognitionSupported, startDictation, type Dictation } from "@/utils/speech";
 
 export function ChatView() {
@@ -53,6 +56,9 @@ export function ChatView() {
   );
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [sseTaskId, setSseTaskId] = useState<string | null>(null);
+  // Phase 1F: Secret Guard. Kinds of credentials the backend stripped
+  // from the last exchange; shown once, dismissible, never invented.
+  const [securityWarnings, setSecurityWarnings] = useState<string[]>([]);
 
   // ── Voice dictation (Web Speech API, browser-side only) ──
   // Transcripts land in the composer and are sent through the ordinary
@@ -138,6 +144,8 @@ export function ChatView() {
       setConversationId(convoId);
       setMessages(loaded);
       setFailedPrompt(null);
+      setErrorDetail(null);
+      setSecurityWarnings([]);
     } catch {
       // conversation not found
     }
@@ -168,6 +176,10 @@ export function ChatView() {
     setActiveChat((current) => current ?? "new-chat");
     setFailedPrompt(null);
     setErrorDetail(null);
+    // Phase 1F: show the redacted form immediately — the server strips
+    // the same credentials before persisting, so the bubble must match
+    // what is actually stored, not the raw input.
+    const displayValue = redactSecrets(value).text;
     setMessages((current) => {
       const retained = replaceId
         ? current.filter((message) => message.id !== replaceId)
@@ -176,7 +188,7 @@ export function ChatView() {
         ? retained
         : [
             ...retained,
-            { id: `user-${Date.now()}`, role: "user", content: value },
+            { id: `user-${Date.now()}`, role: "user", content: displayValue },
           ];
     });
     setInput("");
@@ -197,6 +209,7 @@ export function ChatView() {
       }
       setConversationId(response.conversation_id);
       setSseTaskId(response.task_id);
+      setSecurityWarnings(response.warnings ?? []);
       setMessages((current) => [
         ...current,
         { id: `aion-${Date.now()}`, role: "assistant", response },
@@ -229,6 +242,7 @@ export function ChatView() {
     setErrorDetail(null);
     setConversationId(undefined);
     setSseTaskId(null);
+    setSecurityWarnings([]);
   }
   const startFreshRef = useRef(startFresh);
   startFreshRef.current = startFresh;
@@ -357,6 +371,31 @@ export function ChatView() {
               onAgentsChange={setSelectedAgents}
             />
           </div>
+          {/* Phase 1F: Secret Guard banner — rendered only when the API
+              actually reported stripped credentials for this exchange. */}
+          {securityWarnings.length > 0 && (
+            <div
+              role="alert"
+              className="mx-4 mt-3 flex items-start gap-3 rounded-2xl border bg-soft-peach/50 px-4 py-3 text-sm sm:mx-6">
+              <ShieldAlert className="mt-0.5 size-4 shrink-0 text-destructive" />
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-foreground">
+                  Credentials detected and removed ({securityWarnings.join(", ")}).
+                </p>
+                <p className="mt-0.5 text-xs text-muted-text">
+                  AION never needs your password; use official OAuth. Change
+                  this password if it is real.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSecurityWarnings([])}
+                aria-label="Dismiss security warning"
+                className="grid size-7 shrink-0 place-items-center rounded-full text-muted-text hover:bg-muted hover:text-foreground">
+                <X className="size-4" />
+              </button>
+            </div>
+          )}
           <div className="scrollbar-subtle flex-1 overflow-y-auto p-4 sm:p-6">
             {!activeChat ? (
               <EmptyState
