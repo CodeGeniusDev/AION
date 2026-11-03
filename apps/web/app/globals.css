@@ -35,10 +35,57 @@
     --radius: 1.25rem;
   }
 
+  /* Backward-compatible workspace "dim" preference (Settings page). */
   :root[data-theme="dim"] {
     --background: #bbc3cf;
     --app-shell: #edf1f7;
     --sidebar: #e4eaf2;
+  }
+
+  /* Full dark theme — covers the entire application via tokens.
+     Avoids pure black; every surface token is redefined. */
+  :root[data-theme="dark"] {
+    --background: #0b0f16;
+    --app-shell: #10151e;
+    --sidebar: #10151e;
+    --surface: #161c27;
+    --primary: #4d94ff;
+    --primary-hover: #6aa8ff;
+    --primary-foreground: #0b1220;
+    --navy: #1c2635;
+    --text: #e7ebf2;
+    --muted-text: #98a1b1;
+    --border: #262f3d;
+    --soft-blue: #24344f;
+    --soft-peach: #3a3226;
+    --soft-grey: #232a35;
+    --soft-green: #1f3a30;
+    --foreground: #e7ebf2;
+    --card: #161c27;
+    --card-foreground: #e7ebf2;
+    --secondary: #1b2330;
+    --secondary-foreground: #e7ebf2;
+    --muted: #1b2330;
+    --muted-foreground: #98a1b1;
+    --accent: #1b2330;
+    --accent-foreground: #e7ebf2;
+    --destructive: #ef5b5b;
+    --destructive-foreground: #16080a;
+    --input: #262f3d;
+    --ring: #4d94ff;
+  }
+
+  :root[data-theme="dark"] body {
+    /* Subtle elevation without pure black under cards. */
+    background: var(--background);
+  }
+
+  :root[data-theme="dark"] progress {
+    background: #232a35;
+  }
+
+  :root[data-theme="dark"] progress::-webkit-progress-bar {
+    background: #232a35;
   }
 
   * {
@@ -56,7 +103,7 @@
   input,
   select,
   textarea {
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background;
   }
 
   progress {

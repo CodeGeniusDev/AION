@@ -2,6 +2,7 @@ import type { Config } from "tailwindcss";
 
 export default {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
+  darkMode: ["selector", '[data-theme="dark"]'],
   theme: {
     extend: {
       colors: {
@@ -12,6 +13,7 @@ export default {
         ring: "var(--ring)",
         primary: {
           DEFAULT: "var(--primary)",
+          hover: "var(--primary-hover)",
           foreground: "var(--primary-foreground)",
         },
         secondary: {
