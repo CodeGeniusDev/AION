@@ -26,6 +26,7 @@ import type {
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
+import { firstNameOf, useProfile } from "@/components/profile/profile-provider";
 import { AionMessage } from "./aion-message";
 import { ChatErrorState } from "./chat-error-state";
 import { ModeSelector } from "./mode-selector";
@@ -34,6 +35,7 @@ import { cn } from "@/utils/cn";
 import { speechRecognitionSupported, startDictation, type Dictation } from "@/utils/speech";
 
 export function ChatView() {
+  const { configured, profile } = useProfile();
   const [activeChat, setActiveChat] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -310,7 +312,11 @@ export function ChatView() {
               <Sparkles className="size-4" />
             </span>
             <div className="pt-0.5">
-              <p className="text-xs font-semibold">AION Workspace</p>
+              <p className="text-xs font-semibold">
+                {configured && profile
+                  ? `${firstNameOf(profile)}'s workspace`
+                  : "Local workspace"}
+              </p>
               <p className="text-[10px] text-muted-text">{headerStatus}</p>
             </div>
             <ModeSelector

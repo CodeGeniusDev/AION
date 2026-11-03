@@ -15,17 +15,15 @@ import {
   ShieldAlert,
   type LucideIcon,
 } from "lucide-react";
-import { getHealth, getPendingApprovals, getSettings, updateSettings } from "@/services/api";
+import { getHealth, getPendingApprovals } from "@/services/api";
 import { Dropdown } from "@/components/ui/dropdown";
 import { useTheme, type Theme } from "@/components/layout/theme-provider";
+import {
+  AVATAR_CLASS,
+  initialsFrom,
+  useProfile,
+} from "@/components/profile/profile-provider";
 import { cn } from "@/utils/cn";
-
-function initialsFrom(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "A";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
 
 const THEMES: Array<{ value: Theme; label: string; icon: LucideIcon }> = [
   { value: "light", label: "Light", icon: Sun },
@@ -118,20 +116,11 @@ function MenuItem({ href, icon: Icon, label, onClick }: MenuItemProps) {
 
 export function ProfileMenu() {
   const { theme, setTheme } = useTheme();
-  const [workspaceName, setWorkspaceName] = useState<string>("AION Workspace");
+  const { configured, profile } = useProfile();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   // Real signals refreshed each time the menu opens; null until first load.
   const [pendingApprovals, setPendingApprovals] = useState<number | null>(null);
   const [appVersion, setAppVersion] = useState<string | null>(null);
-
-  // Real identity signal available today: the workspace name from settings.
-  useEffect(() => {
-    getSettings()
-      .then((s) => s.workspace_name && setWorkspaceName(s.workspace_name))
-      .catch(() => {
-        // keep neutral fallback label
-      });
-  }, []);
 
   function refreshLiveMeta() {
     getPendingApprovals()
@@ -142,15 +131,13 @@ export function ProfileMenu() {
       .catch(() => setAppVersion(null));
   }
 
-  async function handleThemeChange(next: Theme) {
+  function handleThemeChange(next: Theme) {
+    // ThemeProvider owns persistence: localStorage + best-effort /api/settings.
     setTheme(next);
-    try {
-      const current = await getSettings();
-      await updateSettings({ ...current, theme: next });
-    } catch {
-      // Theme preference is still applied locally for this session.
-    }
   }
+
+  const displayName = configured && profile ? profile.display_name : "";
+  const avatarClass = profile ? AVATAR_CLASS[profile.avatar_color] : "bg-navy";
 
   return (
     <>
@@ -171,26 +158,45 @@ export function ProfileMenu() {
               "flex h-10 items-center gap-2 rounded-full border bg-surface p-1 pr-2 shadow-[0_2px_10px_rgba(25,36,56,0.035)] hover:bg-muted sm:h-11 sm:p-1.5 sm:pr-2.5",
               open && "bg-muted",
             )}>
-            <span className="grid size-7 place-items-center rounded-full bg-navy text-xs font-semibold text-white sm:size-8">
-              {initialsFrom(workspaceName)}
+            <span
+              className={cn(
+                "grid size-7 place-items-center rounded-full text-xs font-semibold text-white sm:size-8",
+                avatarClass,
+              )}>
+              {displayName ? (
+                initialsFrom(displayName)
+              ) : (
+                <UserRound className="size-4" />
+              )}
             </span>
             <span className="hidden max-w-[8rem] truncate text-xs font-medium xl:block">
-              {workspaceName}
+              {displayName || "Set up profile"}
             </span>
           </button>
         )}>
         {({ close }) => (
           <div className="p-2">
             <div className="flex items-center gap-3 border-b px-2 pb-3 pt-1">
-              <span className="grid size-9 place-items-center rounded-full bg-navy text-sm font-semibold text-white">
-                {initialsFrom(workspaceName)}
+              <span
+                className={cn(
+                  "grid size-9 place-items-center rounded-full text-sm font-semibold text-white",
+                  avatarClass,
+                )}>
+                {displayName ? (
+                  initialsFrom(displayName)
+                ) : (
+                  <UserRound className="size-4" />
+                )}
               </span>
               <span className="min-w-0">
                 <span className="block truncate text-sm font-medium">
-                  {workspaceName}
+                  {displayName || "Set up profile"}
                 </span>
-                <span className="block text-xs text-muted-text">
-                  Workspace owner
+                <span className="block truncate text-xs text-muted-text">
+                  {profile?.role ||
+                    (profile?.username
+                      ? `@${profile.username}`
+                      : "Local workspace")}
                 </span>
               </span>
               <ChevronDown className="ml-auto size-3 text-muted-text" />

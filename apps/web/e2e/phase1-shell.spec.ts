@@ -17,10 +17,20 @@ test.describe("Phase 1: Global Shell & Header Controls", () => {
       page.getByRole("heading", { name: "Personal information" }),
     ).toBeVisible();
     await expect(
+      page.getByRole("heading", { name: "Workspace statistics" }),
+    ).toBeVisible();
+    await expect(
       page.getByRole("heading", { name: "Account information" }),
     ).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: "Preferences" }),
+      page.getByRole("heading", { name: "Appearance" }),
+    ).toBeVisible();
+    // Notification toggles live ONLY in Settings (Profile links there).
+    await expect(
+      page.getByLabel("Notify on task completions"),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("link", { name: "Open Settings" }),
     ).toBeVisible();
   });
 
@@ -31,7 +41,11 @@ test.describe("Phase 1: Global Shell & Header Controls", () => {
     const nameInput = page.getByLabel("Display name");
     await expect(nameInput).toBeVisible();
 
-    // Verify initial save button is disabled (not dirty)
+    // The baseline is whatever the real store holds (empty on first run —
+    // nothing is ever seeded); the test must not mutate server state.
+    const baseline = await nameInput.inputValue();
+
+    // Verify initial save buttons are disabled (not dirty)
     const saveButton = page.getByRole("button", {
       name: "Save profile changes",
     });
@@ -39,7 +53,9 @@ test.describe("Phase 1: Global Shell & Header Controls", () => {
     await expect(saveButton).toBeDisabled();
     await expect(cancelButton).toBeDisabled();
 
-    // Test form validation: empty display name
+    // Typing makes the form dirty; clearing it surfaces inline validation.
+    await nameInput.fill("Playwright Temp Name");
+    await expect(saveButton).toBeEnabled();
     await nameInput.fill("");
     await expect(page.locator("#display-name-error")).toBeVisible();
     await expect(page.locator("#display-name-error")).toContainText(
@@ -47,10 +63,18 @@ test.describe("Phase 1: Global Shell & Header Controls", () => {
     );
     await expect(saveButton).toBeDisabled();
 
-    // Cancel reverts to original value
+    // Invalid email is caught inline too.
+    await nameInput.fill("Playwright Temp Name");
+    const emailInput = page.getByLabel(/Email address/);
+    await emailInput.fill("not-an-email");
+    await expect(saveButton).toBeDisabled();
+    await emailInput.fill("");
+
+    // Cancel reverts to the stored baseline without saving.
     await cancelButton.click();
-    await expect(nameInput).not.toHaveValue("");
+    await expect(nameInput).toHaveValue(baseline);
     await expect(page.locator("#display-name-error")).toBeHidden();
+    await expect(saveButton).toBeDisabled();
   });
 
   test("theme toggle switches between light and dark across the application and persists on reload", async ({

@@ -13,6 +13,7 @@ import {
 import { getHealth, getSettings, updateSettings } from "@/services/api";
 import type { AppSettings } from "@/types";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { SectionCard } from "@/components/ui/section-card";
 import { useTheme, type Theme } from "@/components/layout/theme-provider";
@@ -53,44 +54,47 @@ function Toggle({
   );
 }
 
-const defaultSettings: AppSettings = {
-  workspace_name: "AION Workspace",
-  default_view: "dashboard",
-  preferred_model: "gemini-3.6-flash",
-  theme: "light",
-  memory_enabled: true,
-  verification_enabled: true,
-  notify_task_completions: true,
-  notify_system_health: true,
-  notify_weekly_summary: false,
-};
+// Settings are shown only when the API returns them — there is no fake
+// default state; an unreachable API renders an honest error with Retry.
 
 export function SettingsView() {
   const { theme, setTheme } = useTheme();
-  const [settings, setSettings] = useState<AppSettings>(defaultSettings);
+  const [settings, setSettings] = useState<AppSettings | null>(null);
   const [modelName, setModelName] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    setLoadError(false);
     Promise.all([getSettings(), getHealth()])
       .then(([s, h]) => {
+        if (!mounted) return;
         setSettings(s);
         setModelName(h.model_name || "");
       })
       .catch(() => {
-        /* use defaults */
+        if (mounted) setLoadError(true);
       })
-      .finally(() => setLoading(false));
-  }, []);
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [attempt]);
 
   function update<K extends keyof AppSettings>(key: K, value: AppSettings[K]) {
-    setSettings((prev) => ({ ...prev, [key]: value }));
+    setSettings((prev) => (prev ? { ...prev, [key]: value } : prev));
     setSaved(false);
   }
 
   async function handleSave() {
+    if (!settings) return;
     setSaving(true);
     try {
       const updated = await updateSettings(settings);
@@ -119,6 +123,32 @@ export function SettingsView() {
     );
   }
 
+  if (loadError || !settings) {
+    return (
+      <>
+        <PageHeader
+          eyebrow="System preferences"
+          title="Settings"
+          description="Tune AION's workspace behavior and interface for this device."
+        />
+        <div className="p-4 sm:p-6 lg:p-7">
+          <EmptyState
+            title="Unable to load settings"
+            description="AION could not reach the backend API. Check that the server is running, then retry."
+            action={
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setAttempt((a) => a + 1)}>
+                Retry
+              </Button>
+            }
+          />
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <PageHeader
@@ -138,7 +168,7 @@ export function SettingsView() {
           </Button>
         }
       />
-      <div className="grid gap-5 p-4 sm:p-6 lg:grid-cols-2 lg:p-7">
+      <div className="grid items-start gap-5 p-4 sm:p-6 lg:grid-cols-2 lg:p-7">
         <SectionCard
           title="General"
           description="Basic workspace preferences"

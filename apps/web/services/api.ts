@@ -14,6 +14,8 @@ import type {
   HealthData,
   MemoryRecordsResponse,
   MemoryResponse,
+  Profile,
+  ProfileResponse,
   ResearchResponse,
   Schedule,
   ScheduleCreateRequest,
@@ -196,6 +198,19 @@ export function updateSettings(settings: AppSettings): Promise<AppSettings> {
   return request<AppSettings>("/api/settings", {
     method: "PUT",
     body: JSON.stringify(settings),
+  });
+}
+
+// --- Profile (Phase 1D) ---
+
+export function getProfile(): Promise<ProfileResponse> {
+  return request<ProfileResponse>("/api/profile");
+}
+
+export function updateProfile(profile: Profile): Promise<ProfileResponse> {
+  return request<ProfileResponse>("/api/profile", {
+    method: "PUT",
+    body: JSON.stringify(profile),
   });
 }
 

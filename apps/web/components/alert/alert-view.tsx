@@ -96,7 +96,7 @@ export function AlertView() {
   return (
     <>
       <PageHeader
-        eyebrow="AION Workspace"
+        eyebrow="Alert center"
         title="Notifications"
         description="Stay up to date with task results, agent activity, and important system updates."
         action={

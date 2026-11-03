@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { SidebarStateProvider } from "@/components/layout/sidebar-state-provider";
 import { ThemeProvider } from "@/components/layout/theme-provider";
+import { ProfileProvider } from "@/components/profile/profile-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -25,7 +26,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       </head>
       <body>
         <ThemeProvider>
-          <SidebarStateProvider>{children}</SidebarStateProvider>
+          <ProfileProvider>
+            <SidebarStateProvider>{children}</SidebarStateProvider>
+          </ProfileProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -12,6 +12,14 @@
     --primary-hover: #0f5ce0;
     --primary-foreground: #ffffff;
     --navy: #192438;
+    /* Preset avatar palette (Profile) — same brand hues in both themes;
+       white initials clear 4.5:1 on every swatch. */
+    --avatar-navy: #192438;
+    --avatar-blue: #1769f3;
+    --avatar-teal: #0f766e;
+    --avatar-violet: #6d28d9;
+    --avatar-amber: #b45309;
+    --avatar-rose: #be123c;
     --text: #111318;
     --muted-text: #5b5d66;
     --border: #dfe3e8;

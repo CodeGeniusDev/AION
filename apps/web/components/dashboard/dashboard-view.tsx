@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { PageHeader } from "@/components/layout/page-header";
+import { firstNameOf, useProfile } from "@/components/profile/profile-provider";
 import { SummaryCard } from "./summary-card";
 import { AionStatusBanner } from "./aion-status-banner";
 import { SystemHealthCard } from "./system-health-card";
@@ -17,6 +18,7 @@ import { cn } from "@/utils/cn";
 type Filter = "all" | TaskStatus;
 
 export function DashboardView() {
+  const { configured, profile } = useProfile();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -58,7 +60,11 @@ export function DashboardView() {
     <>
       <PageHeader
         eyebrow="Command center"
-        title="Hello, Abdullah"
+        title={
+          configured && profile
+            ? `Hello, ${firstNameOf(profile)}`
+            : "Hello"
+        }
         description="Manage your Artificial Intelligence Operating Nervous System."
       />
       <div className="p-4 sm:p-6 lg:p-7">

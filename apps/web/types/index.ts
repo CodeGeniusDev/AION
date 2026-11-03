@@ -69,6 +69,33 @@ export interface SystemHealthDetail {
 }
 
 export type ChatMode = "auto" | "quick" | "research" | "manual";
+
+// --- Profile (Phase 1D, GET/PUT /api/profile) ---
+
+export type AvatarColor =
+  | "navy"
+  | "blue"
+  | "teal"
+  | "violet"
+  | "amber"
+  | "rose";
+
+export interface Profile {
+  display_name: string;
+  username: string;
+  email: string;
+  role: string;
+  timezone: string;
+  bio: string;
+  avatar_color: AvatarColor;
+}
+
+export interface ProfileResponse {
+  configured: boolean;
+  profile: Profile | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
 export type AgentId = "planner" | "researcher" | "critic" | "memory";
 
 export interface UsedAgent {
