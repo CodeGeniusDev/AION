@@ -26,3 +26,6 @@ apps/web/playwright-report/
 
 # Desktop agent workspace (user files produced by approved actions — never commit)
 desktop/desktop_workspace/
+
+# Local profile + persisted settings SQLite (Phase 1D)
+apps/api/.data/

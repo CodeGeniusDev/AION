@@ -43,6 +43,10 @@ class Settings:
     # workflows in in-memory SQLite (seeded fresh, lost on restart); set a
     # real path for durable, user-created workflows across restarts.
     workflow_db_path: str = os.getenv("AION_WORKFLOW_DB_PATH", "")
+    # SQLite file path for the Profile + persisted workspace settings
+    # (Phase 1D). Unset falls back to the git-ignored apps/api/.data/
+    # profile.db local file; tests force a temp path via conftest.
+    profile_db_path: str = os.getenv("AION_PROFILE_DB_PATH", "")
     # SQLite file path for the Schedule store (Phase 5). Empty keeps
     # schedules in in-memory SQLite (lost on restart); set a real path
     # for schedules that survive deployments. The schedule runner is
