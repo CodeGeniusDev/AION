@@ -104,7 +104,7 @@ class CognitiveBus(CognitiveBusInterface):
 
     @staticmethod
     def _topics_for(message: CognitiveMessage) -> list[str]:
-        topics = [f"task:{message.task_id}"]
+        topics = ["global", f"task:{message.task_id}"]
         if message.target_agent is None:
             topics.append(f"broadcast:{message.task_id}")
         else:

@@ -76,10 +76,27 @@ class AlertStore:
                 """,
                 (alert_id, title, description, time_str, category, tone, now.isoformat()),
             )
-        return {
+        alert_data = {
             "id": alert_id, "title": title, "description": description,
             "time": time_str, "category": category, "unread": True, "tone": tone,
         }
+        try:
+            from cognitive_bus.schema import CognitiveMessage
+            from routes.chat import workflow_runner
+            workflow_runner.bus.publish(
+                CognitiveMessage(
+                    task_id=alert_id,
+                    source_agent="alerts",
+                    target_agent=None,
+                    intent="alert.created",
+                    content=title,
+                    status="completed",
+                    context=alert_data,
+                )
+            )
+        except Exception:
+            pass
+        return alert_data
 
     def list_all(self, *, unread_only: bool = False, limit: int = 50) -> list[dict]:
         """List alerts, newest first."""

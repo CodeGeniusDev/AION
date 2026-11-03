@@ -49,7 +49,9 @@ class TaskService:
             confidence=confidence,
             created=self._now_iso(),
         )
-        return self.store.create(task)
+        created = self.store.create(task)
+        self._notify_bus(created.id, "task.created", created.title, status=created.status, context={"agent": created.agent, "status": created.status})
+        return created
 
     def get(self, task_id: str) -> Task | None:
         return self.store.get(task_id)
@@ -59,16 +61,39 @@ class TaskService:
 
     def update_status(self, task_id: str, status: str) -> Task | None:
         """Update task status. Special handling for pending_approval -> approved transition."""
-        if status == "approved":
-            # Auto-transition to running when approved
-            return self.store.update_status(task_id, "running")
-        return self.store.update_status(task_id, status)
+        effective_status = "running" if status == "approved" else status
+        updated = self.store.update_status(task_id, effective_status)
+        if updated:
+            self._notify_bus(task_id, f"task.{effective_status}", f"Task status is now {effective_status}", status=effective_status, context={"status": effective_status})
+        return updated
 
     def update_output(self, task_id: str, output) -> Task | None:
-        return self.store.update_output(task_id, output)
+        updated = self.store.update_output(task_id, output)
+        if updated:
+            self._notify_bus(task_id, "task.completed", f"Task {task_id} output updated", status="completed")
+        return updated
 
     def delete(self, task_id: str) -> bool:
         return self.store.delete(task_id)
+
+    @staticmethod
+    def _notify_bus(task_id: str, intent: str, content: str, status: str = "completed", context: dict | None = None) -> None:
+        try:
+            from cognitive_bus.schema import CognitiveMessage
+            from routes.chat import workflow_runner
+            workflow_runner.bus.publish(
+                CognitiveMessage(
+                    task_id=task_id,
+                    source_agent="task_service",
+                    target_agent=None,
+                    intent=intent,
+                    content=content,
+                    status=status if status in ("pending", "processing", "completed", "failed") else "completed",
+                    context=context or {},
+                )
+            )
+        except Exception:
+            pass
 
     @staticmethod
     def _now_iso() -> str:
