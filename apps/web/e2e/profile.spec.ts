@@ -1,48 +1,60 @@
 import { test, expect } from "@playwright/test";
 
 // Phase 1D: header, dashboard greeting and the Profile page must all read
-// the SAME profile from GET /api/profile. These tests never mutate server
-// state — they assert consistency between the UI and the live API, so they
-// pass identically on a first-run (unseeded) install and after setup.
+// the SAME profile from GET /api/profile. Phase 2A: tests that need a
+// specific profile state now drive it deterministically through the
+// AION_TEST_MODE fixture endpoints (reset + optional seed) instead of
+// skipping when the workspace happens to already have (or lack) a profile.
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API =
+  process.env.AION_API_URL ??
+  process.env.NEXT_PUBLIC_API_URL ??
+  "http://localhost:8000";
+
+async function resetState(request: import("@playwright/test").APIRequestContext) {
+  const res = await request.post(`${API}/api/_test/reset`);
+  // 404 means AION_TEST_MODE is off — the suite would then be running
+  // against a developer's real backend, which is exactly what Phase 2A
+  // is designed to prevent. Fail loudly instead of silently skipping.
+  expect(res.ok(), `E2E isolation broken: ${res.status()} ${await res.text()}`).toBeTruthy();
+}
 
 test.describe("Phase 1D: Profile single source of truth", () => {
-  test("header and dashboard greeting match the stored profile", async ({
+  test("header and dashboard greeting match a seeded profile", async ({
     page,
     request,
   }) => {
-    const res = await request.get(`${API}/api/profile`);
-    expect(res.ok()).toBeTruthy();
-    const body = await res.json();
+    await resetState(request);
+    await request.post(`${API}/api/_test/seed/profile`, {
+      data: {
+        display_name: "Ada Lovelace",
+        username: "ada",
+        email: "",
+        role: "",
+        timezone: "UTC",
+        bio: "",
+        avatar_color: "navy",
+      },
+    });
+    const body = await (await request.get(`${API}/api/profile`)).json();
+    expect(body.configured).toBeTruthy();
 
     await page.goto("/dashboard");
     const h1 = page.locator("header h1").first();
-    if (body.configured) {
-      const first = body.profile.display_name.trim().split(/\s+/)[0];
-      await expect(h1).toHaveText(`Hello, ${first}`);
-      await expect(
-        page.getByRole("button", { name: "Open user menu" }),
-      ).toContainText(body.profile.display_name);
-    } else {
-      // First run: neutral greeting, no invented name anywhere.
-      await expect(h1).toHaveText("Hello");
-      await expect(
-        page.getByRole("button", { name: "Open user menu" }),
-      ).toContainText("Set up profile");
-      await expect(page.locator("body")).not.toContainText("Abdullah");
-    }
+    const first = body.profile.display_name.trim().split(/\s+/)[0];
+    await expect(h1).toHaveText(`Hello, ${first}`);
+    await expect(
+      page.getByRole("button", { name: "Open user menu" }),
+    ).toContainText(body.profile.display_name);
   });
 
   test("profile page opens in setup state when no profile exists", async ({
     page,
     request,
   }) => {
+    await resetState(request);
     const body = await (await request.get(`${API}/api/profile`)).json();
-    test.skip(
-      body.configured,
-      "A profile is already configured; setup state not applicable.",
-    );
+    expect(body.configured).toBeFalsy();
 
     await page.goto("/profile");
     await expect(
@@ -61,6 +73,12 @@ test.describe("Phase 1D: Profile single source of truth", () => {
     page,
     request,
   }) => {
+    await resetState(request);
+    // Seed one known task so the total is a real number, not an artifact
+    // of prior tests or the memory fallback.
+    await request.post(`${API}/api/_test/seed/task`, {
+      data: { title: "phase1d stats tile anchor", status: "pending" },
+    });
     const dashRes = await request.get(`${API}/api/dashboard`);
     expect(dashRes.ok()).toBeTruthy();
     const dashboard = await dashRes.json();

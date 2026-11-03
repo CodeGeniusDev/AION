@@ -5,7 +5,7 @@ import { test, expect } from "@playwright/test";
 // The API must be running on :8000 (same assumption as the profile
 // tests in phase1-shell.spec.ts).
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API = process.env.AION_API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 test.describe("Phase 1C: Header controls", () => {
   test("bell badge matches the real unread count from GET /api/alerts", async ({

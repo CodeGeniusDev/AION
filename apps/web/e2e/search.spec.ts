@@ -1,10 +1,22 @@
 import { test, expect } from "@playwright/test";
 
-// Phase 1E: global search. Every assertion is against live API data —
-// tests that need a real entity skip when the workspace genuinely has
-// none. Nothing is ever seeded.
+// Phase 1E: global search. Phase 2A: tests that need real entities seed
+// them through the AION_TEST_MODE fixture endpoints instead of skipping
+// when the workspace happens to be empty. Every assertion still reads the
+// live stores — nothing is mocked or demo data.
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API =
+  process.env.AION_API_URL ??
+  process.env.NEXT_PUBLIC_API_URL ??
+  "http://localhost:8000";
+
+async function resetState(request: import("@playwright/test").APIRequestContext) {
+  const res = await request.post(`${API}/api/_test/reset`);
+  expect(
+    res.ok(),
+    `E2E isolation broken: ${res.status()} ${await res.text()}`,
+  ).toBeTruthy();
+}
 
 test.describe("Phase 1E: Global search", () => {
   test("⌘K and / focus the search field from any page", async ({ page }) => {
@@ -29,19 +41,24 @@ test.describe("Phase 1E: Global search", () => {
     page,
     request,
   }) => {
-    const tasks = await (await request.get(`${API}/api/tasks`)).json();
-    test.skip(tasks.items.length === 0, "No real tasks exist to search for.");
-    const term = (tasks.items[0].title as string).slice(0, 12);
+    await resetState(request);
+    const seeded = await (
+      await request.post(`${API}/api/_test/seed/task`, {
+        data: { title: "quantum-widget-almanac", status: "pending" },
+      })
+    ).json();
+    const term = "quantum-widget";
     // Probe the search API itself so the assertion follows whichever real
-    // store actually holds the data — the test never assumes or seeds.
+    // store actually holds the data — the test uses the same row the UI
+    // will find, no guessing.
     const probe = await (
       await request.get(`${API}/api/search`, { params: { q: term } })
     ).json();
     const rows = Object.values<
       { href: string; title: string; snippet: string }[]
     >(probe.groups).flat();
-    test.skip(rows.length === 0, `No real row matches "${term}".`);
-    const target = rows[0];
+    expect(rows.length, `Seeded task ${seeded.id} should be searchable`).toBeGreaterThan(0);
+    const target = rows.find((r) => r.title.includes(term)) ?? rows[0];
 
     await page.goto("/dashboard");
     await page.keyboard.press("Control+k");
@@ -61,9 +78,13 @@ test.describe("Phase 1E: Global search", () => {
     }
 
     await option.click();
+    const expected = new URL(target.href, "http://localhost");
     await expect
-      .poll(() => decodeURIComponent(page.url()))
-      .toBe(new URL(target.href, "http://localhost:3000").href);
+      .poll(() => {
+        const u = new URL(page.url());
+        return `${u.pathname}${u.search}`;
+      })
+      .toBe(`${expected.pathname}${expected.search}`);
   });
 
   test("quick action New workflow opens the real create form", async ({
@@ -112,9 +133,13 @@ test.describe("Phase 1E: Global search", () => {
     page,
     request,
   }) => {
-    const tasks = await (await request.get(`${API}/api/tasks`)).json();
-    test.skip(tasks.items.length === 0, "No real tasks exist to filter.");
-    const firstTitle = tasks.items[0].title;
+    await resetState(request);
+    const seeded = await (
+      await request.post(`${API}/api/_test/seed/task`, {
+        data: { title: "thispage-scoped-task", status: "pending" },
+      })
+    ).json();
+    const firstTitle = seeded.title as string;
 
     await page.goto("/tasks");
     await expect(page.getByText(firstTitle).first()).toBeVisible();
@@ -137,23 +162,23 @@ test.describe("Phase 1E: Global search", () => {
     page,
     request,
   }) => {
-    const conversations = await (
-      await request.get(`${API}/api/conversations`)
+    await resetState(request);
+    const seeded = await (
+      await request.post(`${API}/api/_test/seed/conversation`, {
+        data: {
+          user_message: "deep-link-probe-message",
+          assistant_message: "acknowledged",
+        },
+      })
     ).json();
-    test.skip(
-      conversations.length === 0,
-      "No real conversations exist to open.",
-    );
-    const convo = conversations[0];
+    const convoId = seeded.conversation_id as string;
     const messages = await (
-      await request.get(
-        `${API}/api/conversations/${convo.conversation_id}/messages`,
-      )
+      await request.get(`${API}/api/conversations/${convoId}/messages`)
     ).json();
-    test.skip(messages.length === 0, "Conversation has no messages.");
+    expect(messages.length, "Fixture must produce at least one message").toBeGreaterThan(0);
     const text: string = messages[0].content;
 
-    await page.goto(`/chat?c=${convo.conversation_id}`);
+    await page.goto(`/chat?c=${convoId}`);
     await expect(
       page.getByText(text.slice(0, 40), { exact: false }).first(),
     ).toBeVisible({ timeout: 10_000 });
