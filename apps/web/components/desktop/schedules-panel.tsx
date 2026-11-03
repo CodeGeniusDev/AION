@@ -156,7 +156,7 @@ export function SchedulesPanel() {
         </Button>
       }>
       {showForm && (
-        <div className="mb-4 rounded-[16px] border bg-[#fafbfd] p-4">
+        <div className="mb-4 rounded-[16px] border bg-muted p-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block text-xs font-medium">
               Name
@@ -172,7 +172,7 @@ export function SchedulesPanel() {
               <select
                 value={tool}
                 onChange={(e) => setTool(e.target.value)}
-                className="mt-2 h-11 w-full rounded-full border bg-white px-4 text-sm">
+                className="mt-2 h-11 w-full rounded-full border bg-surface px-4 text-sm">
                 {SCHEDULABLE_TOOLS.map((t) => (
                   <option key={t} value={t}>{t}</option>
                 ))}

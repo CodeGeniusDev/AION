@@ -28,6 +28,44 @@ export interface DashboardData {
   system_health: number;
   recent_tasks: RecentTask[];
   agent_activity: AgentActivity[];
+  // Phase 2 enhanced telemetry
+  task_counts: TaskCounts;
+  agent_stats: AgentStats;
+  memory_stats: MemoryStats;
+  system_health_detail: SystemHealthDetail | null;
+}
+
+export interface TaskCounts {
+  total: number;
+  completed: number;
+  running: number;
+  pending: number;
+  failed: number;
+}
+
+export interface AgentStats {
+  total_registered: number;
+  executing: number;
+  idle: number;
+  standby: number;
+  offline: number;
+}
+
+export interface MemoryStats {
+  total_records: number;
+  episodic_count: number;
+  semantic_count: number;
+  procedural_count: number;
+  status: string;
+  provider: string;
+}
+
+export interface SystemHealthDetail {
+  score: number;
+  status: "healthy" | "degraded" | "unhealthy";
+  uptime_seconds: number;
+  calculation: string;
+  components: HealthComponent[];
 }
 
 export type ChatMode = "auto" | "quick" | "research" | "manual";
@@ -248,7 +286,7 @@ export interface AppSettings {
   workspace_name: string;
   default_view: string;
   preferred_model: string;
-  theme: "light" | "system" | "dim";
+  theme: "light" | "dark" | "system" | "dim";
   memory_enabled: boolean;
   verification_enabled: boolean;
   notify_task_completions: boolean;

@@ -8,6 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { getSettings, updateSettings } from "@/services/api";
 
 const THEME_STORAGE_KEY = "aion-theme";
 
@@ -57,6 +58,19 @@ function applyToDom(resolved: ResolvedTheme) {
   document.documentElement.style.colorScheme = resolved;
 }
 
+/** Best-effort mirror of the chosen theme to /api/settings so the backend stays
+ * consistent with the client. localStorage remains the local source of truth:
+ * if the API is offline or gated by auth, the theme still applies instantly. */
+async function syncThemeToSettings(theme: Theme) {
+  try {
+    const current = await getSettings();
+    if (current.theme === theme) return;
+    await updateSettings({ ...current, theme });
+  } catch {
+    // Offline / auth-gated — nothing to do, local preference already applied.
+  }
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("system");
   const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>("light");
@@ -93,6 +107,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // Appearance still changes for this session even if storage fails.
     }
+    void syncThemeToSettings(next);
   }, []);
 
   const toggleTheme = useCallback(() => {

@@ -131,11 +131,11 @@ export function AionMessage({
       <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-white">
         <Bot className="size-4" />
       </span>
-      <div className="max-w-[88%] rounded-[22px] rounded-tl-md bg-[#f0f4fa] px-4 py-3 text-sm leading-6 text-aion-text">
+      <div className="max-w-[88%] rounded-[22px] rounded-tl-md bg-surface-2 px-4 py-3 text-sm leading-6 text-aion-text">
         <div className="flex flex-wrap items-center gap-x-2">
           <p className="text-[11px] font-semibold text-primary">AION</p>
           {response.development_mode && (
-            <span className="rounded-full bg-[#fff4d8] px-2 py-0.5 text-[9px] font-medium text-[#84651b]">
+            <span className="rounded-full bg-warning-soft px-2 py-0.5 text-[9px] font-medium text-warning-text">
               Development mode
             </span>
           )}
@@ -144,14 +144,14 @@ export function AionMessage({
           <p className="mb-2 text-[10px] text-muted-text">{agentLine}</p>
         )}
         {pending && (
-          <div className="mb-3 rounded-[14px] border border-[#e2d4ad] bg-[#fff8e6] p-3">
+          <div className="mb-3 rounded-[14px] border border-warning-border bg-warning-soft p-3">
             <div className="flex items-start gap-2">
-              <ShieldCheck className="mt-0.5 size-4 shrink-0 text-[#8b6a16]" />
+              <ShieldCheck className="mt-0.5 size-4 shrink-0 text-warning-text" />
               <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-semibold text-[#8b6a16]">
+                <p className="text-[11px] font-semibold text-warning-text">
                   Approval pending — nothing has run
                 </p>
-                <p className="mt-0.5 text-[10px] leading-5 text-[#8b6a16]/90">
+                <p className="mt-0.5 text-[10px] leading-5 text-warning-text/90">
                   “{pending.tool}” is waiting for your decision. It expires at{" "}
                   {new Date(pending.expires_at).toLocaleTimeString()}.
                 </p>
@@ -167,7 +167,7 @@ export function AionMessage({
         )}
         <p className="whitespace-pre-wrap">{displayAnswer}</p>
         {response.sources.length > 0 && (
-          <div className="mt-3 rounded-[12px] border border-[#dce2ea] bg-white/70 p-3">
+          <div className="mt-3 rounded-[12px] border border-border bg-surface/70 p-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-text">
               Sources
             </p>
@@ -180,7 +180,7 @@ export function AionMessage({
             </ul>
           </div>
         )}
-        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[#dce2ea] pt-3 text-[10px] font-medium text-muted-text">
+        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-3 text-[10px] font-medium text-muted-text">
           <span>{Math.round(response.confidence * 100)}% confidence</span>
           <span>•</span>
           <span>{response.used_agents.length} agents used</span>
@@ -197,14 +197,14 @@ export function AionMessage({
           <button
             type="button"
             onClick={copyAnswer}
-            className="flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[10px] text-muted-text hover:bg-white">
+            className="flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[10px] text-muted-text hover:bg-muted">
             <Copy className="size-3.5" />
             {copied ? "Copied" : "Copy"}
           </button>
           <button
             type="button"
             onClick={onRegenerate}
-            className="flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[10px] text-muted-text hover:bg-white">
+            className="flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[10px] text-muted-text hover:bg-muted">
             <RefreshCw className="size-3.5" />
             Regenerate
           </button>
@@ -214,7 +214,7 @@ export function AionMessage({
               onClick={() => void speakAnswer()}
               disabled={speaking}
               aria-label="Read the answer aloud in the browser"
-              className="flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[10px] text-muted-text hover:bg-white">
+              className="flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[10px] text-muted-text hover:bg-muted">
               <Volume2 className="size-3.5" />
               {speaking ? "Speaking…" : "Speak"}
             </button>
@@ -224,7 +224,7 @@ export function AionMessage({
             onClick={handleSaveToMemory}
             disabled={saved}
             className={cn(
-              "flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[10px] hover:bg-white",
+              "flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[10px] hover:bg-muted",
               saved ? "text-primary" : "text-muted-text",
             )}>
             <Database className="size-3.5" />
@@ -235,8 +235,8 @@ export function AionMessage({
             onClick={() => handleReaction("up")}
             aria-pressed={reaction === "up"}
             className={cn(
-              "grid size-8 place-items-center rounded-full text-muted-text hover:bg-white",
-              reaction === "up" && "bg-white text-primary",
+              "grid size-8 place-items-center rounded-full text-muted-text hover:bg-muted",
+              reaction === "up" && "bg-surface text-primary",
             )}
             aria-label="Like response">
             <ThumbsUp className="size-3.5" />
@@ -246,15 +246,15 @@ export function AionMessage({
             onClick={() => handleReaction("down")}
             aria-pressed={reaction === "down"}
             className={cn(
-              "grid size-8 place-items-center rounded-full text-muted-text hover:bg-white",
-              reaction === "down" && "bg-white text-[#b14a4a]",
+              "grid size-8 place-items-center rounded-full text-muted-text hover:bg-muted",
+              reaction === "down" && "bg-surface text-danger-text",
             )}
             aria-label="Dislike response">
             <ThumbsDown className="size-3.5" />
           </button>
         </div>
         {response.used_agents.length > 0 && (
-          <div className="mt-2 border-t border-[#dce2ea] pt-2">
+          <div className="mt-2 border-t border-border pt-2">
             <button
               type="button"
               onClick={() => setExpanded((value) => !value)}
@@ -269,15 +269,15 @@ export function AionMessage({
               View Agent Process
             </button>
             {expanded && (
-              <div className="mt-2 space-y-3 rounded-[16px] bg-white/70 p-3">
+              <div className="mt-2 space-y-3 rounded-[16px] bg-surface/70 p-3">
                 {response.used_agents.map((agent) => (
                   <div key={agent.id} className="flex gap-2">
                     <Check
                       className={cn(
                         "mt-1 size-3.5 shrink-0",
                         agent.status === "completed"
-                          ? "text-[#2b9b68]"
-                          : "text-[#b14a4a]",
+                          ? "text-success-text"
+                          : "text-danger-text",
                       )}
                     />
                     <div>

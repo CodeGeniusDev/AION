@@ -48,10 +48,10 @@ function WorkflowForm({
   };
 
   return (
-    <div className="rounded-[24px] border bg-white p-5 sm:p-6">
+    <div className="rounded-[24px] border bg-surface p-5 sm:p-6">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold">New workflow</h2>
-        <button type="button" onClick={onCancel} aria-label="Cancel" className="grid size-8 place-items-center rounded-full text-muted-text hover:bg-[#f4f7fb]">
+        <button type="button" onClick={onCancel} aria-label="Cancel" className="grid size-8 place-items-center rounded-full text-muted-text hover:bg-muted">
           <X className="size-4" />
         </button>
       </div>
@@ -87,7 +87,7 @@ function WorkflowForm({
                 onClick={() => toggleAgent(agent)}
                 aria-pressed={active}
                 className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-                  active ? "border-primary bg-primary text-white" : "bg-[#fafbfd] text-muted-text hover:bg-[#f4f7fb]"
+                  active ? "border-primary bg-primary text-white" : "bg-muted text-muted-text hover:bg-muted"
                 }`}
               >
                 {agent}
@@ -111,9 +111,9 @@ function WorkflowForm({
 }
 
 function RunPanel({ result }: { result: WorkflowRunResult }) {
-  const tone = result.status === "completed" ? "text-[#155e3f]" : "text-red-600";
+  const tone = result.status === "completed" ? "text-success-text" : "text-red-600";
   return (
-    <div className="mt-4 rounded-[18px] bg-[#f4f7fb] p-4 text-xs leading-5">
+    <div className="mt-4 rounded-[18px] bg-muted p-4 text-xs leading-5">
       <div className="flex items-center justify-between">
         <span className={`font-semibold ${tone}`}>{result.status}</span>
         <span className="text-muted-text">
@@ -234,7 +234,7 @@ export function WorkflowsView() {
               const result = workflow.id ? results[workflow.id] : undefined;
               const isOpen = runningId === workflow.id;
               return (
-                <article key={workflow.id ?? workflow.name} className="flex flex-col rounded-[24px] border bg-white p-5 sm:p-6">
+                <article key={workflow.id ?? workflow.name} className="flex flex-col rounded-[24px] border bg-surface p-5 sm:p-6">
                   <div className="flex items-start justify-between">
                     <span className={`grid size-12 place-items-center rounded-[18px] ${index === 0 ? "bg-soft-blue" : index === 1 ? "bg-soft-peach" : "bg-soft-green"}`}>
                       {index === 0 ? <Network className="size-5" /> : <Route className="size-5" />}
@@ -245,7 +245,7 @@ export function WorkflowsView() {
                   <p className="mt-2 text-sm leading-6 text-muted-text">{workflow.description}</p>
                   <div className="mt-5 flex flex-wrap gap-1.5">
                     {workflow.agents.map((agent, agentIndex) => (
-                      <span key={agent} className="rounded-full border bg-[#fafbfd] px-2.5 py-1 text-[10px] font-medium">
+                      <span key={agent} className="rounded-full border bg-muted px-2.5 py-1 text-[10px] font-medium">
                         {agentIndex + 1}. {agent}
                       </span>
                     ))}
@@ -282,7 +282,7 @@ export function WorkflowsView() {
                         type="button"
                         onClick={() => (workflow.id ? startRun(workflow.id) : undefined)}
                         disabled={!workflow.id}
-                        className="ml-auto grid size-9 place-items-center rounded-full bg-primary text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-[#c6ccd5]"
+                        className="ml-auto grid size-9 place-items-center rounded-full bg-primary text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-muted"
                         aria-label={`Run ${workflow.name}`}
                       >
                         <ArrowUpRight className="size-4" />

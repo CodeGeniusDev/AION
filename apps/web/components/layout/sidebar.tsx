@@ -4,58 +4,16 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Activity,
-  Bot,
   BrainCircuit,
   ChevronLeft,
   CircleHelp,
-  FlaskConical,
-  LayoutDashboard,
-  ListTodo,
-  MemoryStick,
-  MessageCircleMore,
-  Monitor,
-  Network,
   Plus,
-  Settings,
+  Server,
   X,
-  type LucideIcon,
 } from "lucide-react";
 import { getHealth } from "@/services/api";
+import { NAV_GROUPS } from "@/components/layout/nav";
 import { cn } from "@/utils/cn";
-
-interface NavItem {
-  label: string;
-  href: string;
-  icon: LucideIcon;
-}
-
-const groups: Array<{ label: string; items: NavItem[] }> = [
-  {
-    label: "Overview",
-    items: [
-      { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-      { label: "AI Chat", href: "/chat", icon: MessageCircleMore },
-      { label: "Tasks", href: "/tasks", icon: ListTodo },
-    ],
-  },
-  {
-    label: "Intelligence",
-    items: [
-      { label: "Agents", href: "/agents", icon: Bot },
-      { label: "Workflows", href: "/workflows", icon: Network },
-      { label: "Memory", href: "/memory", icon: MemoryStick },
-    ],
-  },
-  {
-    label: "System",
-    items: [
-      { label: "Desktop", href: "/desktop", icon: Monitor },
-      { label: "Research", href: "/research", icon: FlaskConical },
-      { label: "Settings", href: "/settings", icon: Settings },
-    ],
-  },
-];
 
 interface SidebarProps {
   collapsed: boolean;
@@ -72,19 +30,41 @@ export function Sidebar({
 }: SidebarProps) {
   const pathname = usePathname();
   const [modelName, setModelName] = useState("");
+  const [systemStatus, setSystemStatus] = useState<
+    "healthy" | "degraded" | "unhealthy" | "unknown"
+  >("unknown");
 
   useEffect(() => {
     getHealth()
-      .then((h) => setModelName(h.model_name || ""))
-      .catch(() => setModelName(""));
+      .then((h) => {
+        setModelName(h.model_name || "");
+        setSystemStatus(h.status);
+      })
+      .catch(() => {
+        setModelName("");
+        setSystemStatus("unknown");
+      });
   }, []);
+
+  const statusLabel = {
+    healthy: "System online",
+    degraded: "System degraded",
+    unhealthy: "System unhealthy",
+    unknown: "Status unknown",
+  }[systemStatus];
+  const statusDot =
+    systemStatus === "healthy"
+      ? "bg-success-solid"
+      : systemStatus === "unknown"
+        ? "bg-neutral-solid"
+        : "bg-warning-solid";
 
   const renderContent = (isCollapsed: boolean) => (
     <>
       <div
         data-sidebar-header
         className={cn(
-          "flex h-[76px] items-center border-b border-[#d9e0e8]",
+          "flex h-[76px] items-center border-b border-border",
           isCollapsed ? "justify-center px-3" : "px-5",
         )}
       >
@@ -110,7 +90,7 @@ export function Sidebar({
           onClick={onCollapse}
           data-sidebar-collapse-button
           className={cn(
-            "ml-auto hidden size-8 place-items-center rounded-full border bg-white text-muted-text hover:text-aion-text lg:grid",
+            "ml-auto hidden size-8 place-items-center rounded-full border bg-surface text-muted-text hover:text-foreground lg:grid",
             isCollapsed && "absolute left-[70px]",
           )}
           aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
@@ -126,7 +106,7 @@ export function Sidebar({
         <button
           type="button"
           onClick={onMobileClose}
-          className="ml-auto grid size-9 place-items-center rounded-full border bg-white lg:hidden"
+          className="ml-auto grid size-9 place-items-center rounded-full border bg-surface lg:hidden"
           aria-label="Close navigation"
         >
           <X className="size-4" />
@@ -145,7 +125,7 @@ export function Sidebar({
           href="/chat"
           onClick={onMobileClose}
           className={cn(
-            "mb-6 flex h-12 items-center rounded-full bg-primary text-sm font-medium text-white shadow-[0_7px_18px_rgba(23,105,243,0.2)] transition-colors hover:bg-[#0f5ce0]",
+            "mb-6 flex h-12 items-center rounded-full bg-primary text-sm font-medium text-primary-foreground shadow-[0_7px_18px_rgba(23,105,243,0.2)] transition-colors hover:bg-primary-hover",
             isCollapsed ? "justify-center" : "gap-3 px-4",
           )}
         >
@@ -153,12 +133,12 @@ export function Sidebar({
           {!isCollapsed && <span data-sidebar-expanded>New Task</span>}
         </Link>
         <nav aria-label="Primary navigation" className="space-y-6">
-          {groups.map((group) => (
+          {NAV_GROUPS.map((group) => (
             <div key={group.label}>
               {!isCollapsed && (
                 <p
                   data-sidebar-expanded
-                  className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9299a4]"
+                  className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-text"
                 >
                   {group.label}
                 </p>
@@ -178,8 +158,8 @@ export function Sidebar({
                         "flex h-10 items-center rounded-full border border-transparent text-[13px] font-medium transition-colors",
                         isCollapsed ? "justify-center" : "gap-3 px-3",
                         active
-                          ? "border-[#d7dee7] bg-[#f8fafc] text-aion-text shadow-[0_2px_7px_rgba(25,36,56,0.04)]"
-                          : "text-[#666d78] hover:bg-white/70 hover:text-aion-text",
+                          ? "border-border bg-muted text-foreground shadow-[0_2px_7px_rgba(25,36,56,0.04)]"
+                          : "text-muted-text hover:bg-muted hover:text-foreground",
                       )}
                     >
                       <Icon
@@ -201,48 +181,42 @@ export function Sidebar({
 
       <div
         data-sidebar-footer
-        className={cn("border-t border-[#d9e0e8]", isCollapsed ? "p-3" : "p-4")}
+        className={cn("border-t border-border", isCollapsed ? "p-3" : "p-4")}
       >
         <div
           data-sidebar-collapsed-only
           className={cn(
-            "place-items-center rounded-2xl bg-white py-3",
+            "place-items-center rounded-2xl bg-surface py-3",
             isCollapsed ? "grid" : "hidden",
           )}
-          title="System Online"
+          title={statusLabel}
         >
-          <span className="size-2.5 rounded-full bg-[#35b978] shadow-[0_0_0_4px_rgba(53,185,120,0.12)]" />
+          <span
+            className={cn(
+              "size-2.5 rounded-full shadow-[0_0_0_4px_rgba(53,185,120,0.12)]",
+              statusDot,
+            )}
+          />
         </div>
         <div
           data-sidebar-expanded
           className={cn(
-            "rounded-[20px] border bg-white p-4 shadow-[0_4px_14px_rgba(25,36,56,0.04)]",
+            "rounded-[20px] border bg-surface p-4 shadow-[0_4px_14px_rgba(25,36,56,0.04)]",
             isCollapsed && "hidden",
           )}
         >
           <div className="flex items-center gap-2 text-xs font-semibold">
-            <span className="size-2 rounded-full bg-[#35b978]" />
-            System Online
-            <Activity className="ml-auto size-3.5 text-primary" />
+            <span className={cn("size-2 rounded-full", statusDot)} />
+            {statusLabel}
+            <Server className="ml-auto size-3.5 text-primary" />
           </div>
-          <div className="mt-4 flex items-center justify-between text-[10px] text-muted-text">
-            <span>System usage</span>
-            <span>68%</span>
-          </div>
-          <progress
-            className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full accent-primary"
-            value="68"
-            max="100"
-          >
-            68%
-          </progress>
           <div className="mt-3 flex items-center justify-between text-[10px]">
             <span className="text-muted-text">Current model</span>
-            <span className="font-medium">{modelName || "gemini-3.6-flash"}</span>
+            <span className="font-medium">{modelName || "—"}</span>
           </div>
           <Link
             href="/settings"
-            className="mt-3 flex h-8 items-center justify-center gap-2 rounded-full bg-navy text-[10px] font-medium text-white hover:bg-[#25334b]"
+            className="mt-3 flex h-8 items-center justify-center gap-2 rounded-full bg-navy text-[10px] font-medium text-white hover:opacity-90"
           >
             <CircleHelp className="size-3.5" /> System details
           </Link>

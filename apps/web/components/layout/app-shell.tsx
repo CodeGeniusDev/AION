@@ -25,7 +25,7 @@ export function AppShell({ children }: AppShellProps) {
         <div className="flex min-w-0 flex-1 flex-col">
           <TopNavigation onMenuOpen={() => setMobileOpen(true)} />
           <main className="min-w-0 flex-1 p-3 pt-0 sm:p-4 sm:pt-0 lg:p-5 lg:pt-0">
-            <div className="min-h-full overflow-hidden rounded-[24px] border border-white bg-surface shadow-[0_3px_18px_rgba(25,36,56,0.04)] sm:rounded-[28px]">
+            <div className="min-h-full overflow-hidden rounded-[24px] border border-border bg-surface shadow-[0_3px_18px_rgba(25,36,56,0.04)] sm:rounded-[28px]">
               {children}
             </div>
           </main>

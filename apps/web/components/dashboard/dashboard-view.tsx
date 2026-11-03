@@ -119,7 +119,7 @@ export function DashboardView() {
               </div>
               <section
                 id="recent-tasks"
-                className="min-w-0 rounded-[24px] border bg-white p-5 sm:p-6"
+                className="min-w-0 rounded-[24px] border bg-surface p-5 sm:p-6"
               >
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div>
@@ -130,7 +130,7 @@ export function DashboardView() {
                       View recent AI tasks and results
                     </p>
                   </div>
-                  <div className="flex flex-wrap gap-1 rounded-full bg-[#f2f4f7] p-1">
+                  <div className="flex flex-wrap gap-1 rounded-full bg-surface-2 p-1">
                     {(
                       ["all", "completed", "running", "failed"] as Filter[]
                     ).map((item) => (
@@ -141,7 +141,7 @@ export function DashboardView() {
                         className={cn(
                           "rounded-full px-3 py-1.5 text-[10px] font-medium capitalize",
                           filter === item
-                            ? "bg-white text-aion-text shadow-sm"
+                            ? "bg-surface text-aion-text shadow-sm"
                             : "text-muted-text hover:text-aion-text",
                         )}
                       >
@@ -167,7 +167,7 @@ export function DashboardView() {
             <div className="min-w-0 space-y-5">
               <SystemHealthCard value={data.system_health} health={health} />
               <AionStatusBanner connectedAgents={data.active_agents} />
-              <section className="rounded-[24px] border bg-white p-5">
+              <section className="rounded-[24px] border bg-surface p-5">
                 <h2 className="text-lg font-semibold tracking-[-0.02em]">
                   Agent Activity
                 </h2>

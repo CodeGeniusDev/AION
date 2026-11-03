@@ -21,12 +21,12 @@ export function ChatErrorState({
   return (
     <div
       role="alert"
-      className="ml-12 max-w-xl rounded-[20px] border border-[#efcaca] bg-[#fff5f5] p-4">
+      className="ml-12 max-w-xl rounded-[20px] border border-danger-border bg-danger-soft p-4">
       <div className="flex gap-3">
         {isApiKeyIssue ? (
-          <KeyRound className="mt-0.5 size-5 shrink-0 text-[#b53d3d]" />
+          <KeyRound className="mt-0.5 size-5 shrink-0 text-danger-text" />
         ) : (
-          <AlertCircle className="mt-0.5 size-5 shrink-0 text-[#b53d3d]" />
+          <AlertCircle className="mt-0.5 size-5 shrink-0 text-danger-text" />
         )}
         <div>
           <p className="text-sm font-semibold">

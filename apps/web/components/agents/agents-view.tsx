@@ -87,7 +87,7 @@ export function AgentsView() {
               const Icon = icons[index % icons.length];
               const isExpanded = expandedAgent === (agent.id ?? agent.name);
               return (
-                <article key={agent.id ?? agent.name} className="rounded-[24px] border bg-white p-5 sm:p-6">
+                <article key={agent.id ?? agent.name} className="rounded-[24px] border bg-surface p-5 sm:p-6">
                   <div className="flex items-start gap-4">
                     <span className={`grid size-12 shrink-0 place-items-center rounded-[18px] ${tones[index % tones.length]}`}>
                       <Icon className="size-5 text-navy" />
@@ -100,7 +100,7 @@ export function AgentsView() {
                       <p className="mt-2 text-sm leading-6 text-muted-text">{agent.description}</p>
                     </div>
                   </div>
-                  <div className="mt-6 grid grid-cols-2 gap-3 rounded-[18px] bg-[#f7f9fc] p-4">
+                  <div className="mt-6 grid grid-cols-2 gap-3 rounded-[18px] bg-muted p-4">
                     <div>
                       <p className="text-[10px] uppercase tracking-[0.12em] text-muted-text">Specialty</p>
                       <p className="mt-1 text-xs font-semibold">{agent.specialty}</p>
@@ -115,7 +115,7 @@ export function AgentsView() {
                   </div>
 
                   {isExpanded && (
-                    <div className="mt-4 rounded-[18px] border border-[#e8ecf2] bg-[#fafbfd] p-4">
+                    <div className="mt-4 rounded-[18px] border border-border bg-muted p-4">
                       <h3 className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-text">Agent Details</h3>
                       <dl className="mt-3 space-y-2.5">
                         <div className="flex items-center justify-between text-xs">
@@ -144,7 +144,7 @@ export function AgentsView() {
                   <button
                     type="button"
                     onClick={() => setExpandedAgent(isExpanded ? null : (agent.id ?? agent.name))}
-                    className="mt-5 flex h-10 w-full items-center justify-center gap-2 rounded-full bg-navy text-xs font-medium text-white hover:bg-[#25334b] transition-colors"
+                    className="mt-5 flex h-10 w-full items-center justify-center gap-2 rounded-full bg-navy text-xs font-medium text-white hover:bg-navy/80 transition-colors"
                   >
                     {isExpanded ? (
                       <>Hide details <ChevronUp className="size-4" /></>

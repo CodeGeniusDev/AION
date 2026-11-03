@@ -262,7 +262,7 @@ export function ChatView() {
         }
       />
       <div className="grid min-h-[680px] min-w-0 lg:grid-cols-[270px_minmax(0,1fr)]">
-        <aside className="border-b bg-[#f8fafc] p-4 lg:border-b-0 lg:border-r">
+        <aside className="border-b bg-muted p-4 lg:border-b-0 lg:border-r">
           <p className="px-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-text">
             Recent conversations
           </p>
@@ -281,7 +281,7 @@ export function ChatView() {
                       "flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-[11px] transition-colors",
                       conversationId === convo.conversation_id
                         ? "bg-primary/10 font-medium text-primary"
-                        : "text-muted-text hover:bg-white",
+                        : "text-muted-text hover:bg-muted",
                     )}>
                     <MessageCircleMore className="size-3.5 shrink-0" />
                     <span className="flex-1 truncate">{convo.title}</span>
@@ -294,7 +294,7 @@ export function ChatView() {
                         e.stopPropagation();
                         void handleDeleteConversation(convo.conversation_id);
                       }}
-                      className="shrink-0 rounded p-0.5 text-muted-text hover:text-[#b14a4a]"
+                      className="shrink-0 rounded p-0.5 text-muted-text hover:text-danger-text"
                       aria-label={`Delete ${convo.title}`}>
                       <Trash2 className="size-3" />
                     </button>
@@ -344,7 +344,7 @@ export function ChatView() {
                       <div className="max-w-[82%] rounded-[22px] rounded-tr-md bg-navy px-4 py-3 text-sm leading-6 text-white">
                         <p>{message.content}</p>
                       </div>
-                      <span className="grid size-9 shrink-0 place-items-center rounded-full bg-[#e9edf2] text-navy">
+                      <span className="grid size-9 shrink-0 place-items-center rounded-full bg-muted text-navy">
                         <UserRound className="size-4" />
                       </span>
                     </div>
@@ -377,7 +377,7 @@ export function ChatView() {
             )}
           </div>
           <form onSubmit={submit} className="border-t p-4 sm:p-5">
-            <div className="mx-auto flex max-w-3xl items-end gap-2 rounded-[26px] border bg-white p-2 pl-4 shadow-[0_6px_22px_rgba(25,36,56,0.06)] focus-within:outline-none focus-within:ring-0">
+            <div className="mx-auto flex max-w-3xl items-end gap-2 rounded-[26px] border bg-surface p-2 pl-4 shadow-[0_6px_22px_rgba(25,36,56,0.06)] focus-within:outline-none focus-within:ring-0">
               <label className="min-w-0 flex-1">
                 <span className="sr-only">Message AION</span>
 
@@ -417,7 +417,7 @@ export function ChatView() {
           focus-visible:border-0
           focus-visible:outline-none
           focus-visible:ring-0
-          placeholder:text-[#9a9fa7]
+          placeholder:text-muted-text
         "
                 />
               </label>
@@ -431,7 +431,7 @@ export function ChatView() {
                   aria-pressed={listening}
                   aria-label={listening ? "Stop dictating" : "Dictate a message"}
                   className={cn(
-                    listening && "border-[#b53d3d] bg-[#fff0f0] text-[#b53d3d] animate-pulse",
+                    listening && "border-danger-border bg-danger-soft text-danger-text animate-pulse",
                   )}>
                   {listening ? (
                     <MicOff className="size-4" />
@@ -451,12 +451,12 @@ export function ChatView() {
             </div>
 
             {voiceError && (
-              <p role="alert" className="mx-auto mt-2 max-w-3xl text-center text-[10px] text-[#b14a4a]">
+              <p role="alert" className="mx-auto mt-2 max-w-3xl text-center text-[10px] text-danger-text">
                 {voiceError}
               </p>
             )}
             {manualInvalid && (
-              <p className="mx-auto mt-2 max-w-3xl text-center text-[10px] text-[#b14a4a]">
+              <p className="mx-auto mt-2 max-w-3xl text-center text-[10px] text-danger-text">
                 Select at least one agent in Manual Agents mode.
               </p>
             )}

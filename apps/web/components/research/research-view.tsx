@@ -56,7 +56,7 @@ export function ResearchView() {
       />
       <div className="p-4 sm:p-6 lg:p-7">
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1.45fr)_minmax(280px,.55fr)]">
-          <section className="rounded-[24px] border bg-white p-5 sm:p-6">
+          <section className="rounded-[24px] border bg-surface p-5 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold">Recent notes</h2>
@@ -95,7 +95,7 @@ export function ResearchView() {
                       <button
                         type="button"
                         disabled
-                        className="ml-auto grid size-9 shrink-0 place-items-center rounded-full border border-[#d8dce4] bg-[#f0f2f5] text-[#a0a8b4] cursor-not-allowed"
+                        className="ml-auto grid size-9 shrink-0 place-items-center rounded-full border border-border bg-surface-2 text-muted-text cursor-not-allowed"
                         aria-label={`Open ${note.title} (coming soon)`}
                       >
                         <ArrowUpRight className="size-4" />

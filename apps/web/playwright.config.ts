@@ -9,16 +9,20 @@ export default defineConfig({
   testDir: "./e2e",
   timeout: 30_000,
   retries: 0,
+  // Tests share one dev server and one in-process backend (settings are
+  // mutable, theme syncs to /api/settings). Serialization avoids races.
+  fullyParallel: false,
+  workers: 1,
   use: {
     baseURL: `http://localhost:${PORT}`,
     headless: true,
     screenshot: "only-on-failure",
   },
   webServer: {
-    command: `npm run dev -- --port ${PORT}`,
+    command: `/usr/local/bin/node ./node_modules/next/dist/bin/next dev --port ${PORT}`,
     port: PORT,
     timeout: 60_000,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: true,
   },
   projects: [
     {

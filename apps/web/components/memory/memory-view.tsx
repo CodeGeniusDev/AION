@@ -133,7 +133,7 @@ export function MemoryView() {
                 return (
                   <article
                     key={category.id}
-                    className="rounded-[24px] border bg-white p-5 sm:p-6">
+                    className="rounded-[24px] border bg-surface p-5 sm:p-6">
                     <span
                       className={`grid size-12 place-items-center rounded-[18px] ${tones[index % tones.length]}`}>
                       <Icon className="size-5" />
@@ -171,7 +171,7 @@ export function MemoryView() {
                 {policies.map((item, index) => (
                   <div
                     key={item}
-                    className="rounded-[18px] bg-[#f7f9fc] p-4">
+                    className="rounded-[18px] bg-muted p-4">
                     <span className="text-[10px] font-semibold text-primary">
                       0{index + 1}
                     </span>
@@ -183,7 +183,7 @@ export function MemoryView() {
 
             {/* Records browser panel */}
             {showRecords && (
-              <div className="mt-5 rounded-[24px] border bg-white p-5 sm:p-6">
+              <div className="mt-5 rounded-[24px] border bg-surface p-5 sm:p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-lg font-semibold">Memory Records</h2>
@@ -194,7 +194,7 @@ export function MemoryView() {
                   <button
                     type="button"
                     onClick={() => setShowRecords(false)}
-                    className="rounded-full p-1.5 text-muted-text hover:bg-[#f2f4f7]"
+                    className="rounded-full p-1.5 text-muted-text hover:bg-muted"
                     aria-label="Close records">
                     <X className="size-4" />
                   </button>
@@ -208,7 +208,7 @@ export function MemoryView() {
                     <input
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="h-11 w-full rounded-full border bg-white pl-11 pr-4 text-sm"
+                      className="h-11 w-full rounded-full border bg-surface pl-11 pr-4 text-sm"
                       placeholder="Search saved context..."
                     />
                   </label>
@@ -233,7 +233,7 @@ export function MemoryView() {
                           className="flex items-start gap-3 py-3">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
-                              <span className="rounded-full bg-[#f2f4f7] px-2 py-0.5 text-[9px] font-medium text-primary">
+                              <span className="rounded-full bg-muted px-2 py-0.5 text-[9px] font-medium text-primary">
                                 {record.type}
                               </span>
                               <span className="text-[9px] text-muted-text">
@@ -259,7 +259,7 @@ export function MemoryView() {
                             onClick={() =>
                               void handleDelete(record.memory_id)
                             }
-                            className="shrink-0 rounded p-1 text-muted-text hover:text-[#b14a4a]"
+                            className="shrink-0 rounded p-1 text-muted-text hover:text-danger-text"
                             aria-label={`Delete record ${record.memory_id}`}>
                             <Trash2 className="size-3.5" />
                           </button>

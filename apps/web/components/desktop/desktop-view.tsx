@@ -165,7 +165,7 @@ export function DesktopView() {
         {/* ── Bridge health strip ── */}
         <section
           aria-label="Desktop bridge health"
-          className="flex flex-wrap items-center gap-3 rounded-[24px] border bg-white px-5 py-4">
+          className="flex flex-wrap items-center gap-3 rounded-[24px] border bg-surface px-5 py-4">
           {healthState === "loading" ? (
             <LoadingSkeleton className="h-5 w-56" />
           ) : healthState === "error" ? (
@@ -184,8 +184,8 @@ export function DesktopView() {
                 className={cn(
                   "size-2.5 rounded-full",
                   health?.reachable
-                    ? "bg-[#35b978] shadow-[0_0_0_4px_rgba(53,185,120,0.12)]"
-                    : "bg-[#b53d3d] shadow-[0_0_0_4px_rgba(181,61,61,0.12)]",
+                    ? "bg-success-solid shadow-[0_0_0_4px_rgba(53,185,120,0.12)]"
+                    : "bg-danger-solid shadow-[0_0_0_4px_rgba(181,61,61,0.12)]",
                 )}
               />
               <span className="text-sm font-medium">
@@ -206,9 +206,9 @@ export function DesktopView() {
           fallback={
             <section
               aria-label="Approval queue empty"
-              className="flex items-center gap-3 rounded-[24px] border border-[#b9decf] bg-[#e8f6ef]/50 px-5 py-4">
-              <ShieldCheck className="size-4 text-[#247a55]" />
-              <p className="text-sm font-medium text-[#247a55]">
+              className="flex items-center gap-3 rounded-[24px] border border-success-border bg-success-soft/50 px-5 py-4">
+              <ShieldCheck className="size-4 text-success-text" />
+              <p className="text-sm font-medium text-success-text">
                 Queue is clear — nothing is waiting for your approval.
               </p>
             </section>
@@ -255,7 +255,7 @@ export function DesktopView() {
                     <p className="mt-0.5 text-[11px] text-muted-text">
                       {item.id} · {formatTime(item.created_at)}
                     </p>
-                    <p className="mt-2 break-all rounded bg-[#f4f7fb] px-3 py-2 font-mono text-[11px] text-muted-text">
+                    <p className="mt-2 break-all rounded bg-muted px-3 py-2 font-mono text-[11px] text-muted-text">
                       {parameterSummary(item.parameters)}
                     </p>
                     {outputs[item.task_id] != null && (
@@ -264,7 +264,7 @@ export function DesktopView() {
                         className={cn(
                           "mt-2 line-clamp-2 text-xs",
                           item.status === "completed"
-                            ? "text-[#247a55]"
+                            ? "text-success-text"
                             : "text-red-600",
                         )}>
                         {outputs[item.task_id]}
@@ -310,8 +310,8 @@ export function DesktopView() {
                 {audit.map((event) => (
                   <li
                     key={event.seq}
-                    className="flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-[14px] bg-[#f4f7fb] px-4 py-2.5">
-                    <span className="rounded-full bg-white px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em]">
+                    className="flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-[14px] bg-muted px-4 py-2.5">
+                    <span className="rounded-full bg-surface px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em]">
                       {event.event}
                     </span>
                     <span className="font-mono text-[11px] text-muted-text">

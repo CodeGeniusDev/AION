@@ -13,19 +13,41 @@
     --primary-foreground: #ffffff;
     --navy: #192438;
     --text: #111318;
-    --muted-text: #74777f;
+    --muted-text: #64666f;
     --border: #dfe3e8;
     --soft-blue: #cbdcff;
     --soft-peach: #fde7c5;
     --soft-grey: #e5e5e9;
     --soft-green: #ccebdd;
+    /* Secondary surface (chat bubbles, chips) — distinct from card surface. */
+    --surface-2: #f0f4fa;
+    --scrollbar: #c7cdd6;
+    --progress-track: #e5e9ef;
+    /* Semantic status colors — soft backgrounds, text, borders, solid dots.
+       Every one has a dark variant so no pastel surface blows out dark mode. */
+    --success-soft: #e8f6ef;
+    --warning-soft: #fff4d8;
+    --danger-soft: #fde8e8;
+    --info-soft: #e9eff8;
+    --success-text: #247a55;
+    --warning-text: #84651b;
+    --danger-text: #b53d3d;
+    --info-text: #2761c8;
+    --success-border: #b9decf;
+    --warning-border: #e2d4ad;
+    --danger-border: #efcaca;
+    --info-border: #bfd2fa;
+    --success-solid: #35b978;
+    --warning-solid: #e0a63a;
+    --danger-solid: #d65a5a;
+    --neutral-solid: #9aa1ac;
     --foreground: #111318;
     --card: #ffffff;
     --card-foreground: #111318;
     --secondary: #edf2f8;
     --secondary-foreground: #192438;
     --muted: #f0f3f7;
-    --muted-foreground: #74777f;
+    --muted-foreground: #64666f;
     --accent: #edf2f8;
     --accent-foreground: #192438;
     --destructive: #d84444;
@@ -60,6 +82,25 @@
     --soft-peach: #3a3226;
     --soft-grey: #232a35;
     --soft-green: #1f3a30;
+    --surface-2: #1b2330;
+    --scrollbar: #2a3444;
+    --progress-track: #232a35;
+    --success-soft: #12271f;
+    --warning-soft: #2a2415;
+    --danger-soft: #2a1717;
+    --info-soft: #16202f;
+    --success-text: #6ee7b7;
+    --warning-text: #fcd34d;
+    --danger-text: #fca5a5;
+    --info-text: #93c5fd;
+    --success-border: #1f4d3a;
+    --warning-border: #4d421f;
+    --danger-border: #4d2424;
+    --info-border: #24405f;
+    --success-solid: #34d399;
+    --warning-solid: #fbbf24;
+    --danger-solid: #f87171;
+    --neutral-solid: #6b7280;
     --foreground: #e7ebf2;
     --card: #161c27;
     --card-foreground: #e7ebf2;
@@ -75,17 +116,22 @@
     --ring: #4d94ff;
   }
 
+  :root {
+    color-scheme: light;
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+  }
+
+  /* Subtle elevation without pure black under cards. */
   :root[data-theme="dark"] body {
-    /* Subtle elevation without pure black under cards. */
     background: var(--background);
   }
 
-  :root[data-theme="dark"] progress {
-    background: #232a35;
-  }
-
+  :root[data-theme="dark"] progress,
   :root[data-theme="dark"] progress::-webkit-progress-bar {
-    background: #232a35;
+    background: var(--progress-track);
   }
 
   * {
@@ -109,12 +155,12 @@
   progress {
     appearance: none;
     border: 0;
-    background: #e5e9ef;
+    background: var(--progress-track);
   }
 
   progress::-webkit-progress-bar {
     border-radius: 999px;
-    background: #e5e9ef;
+    background: var(--progress-track);
   }
 
   progress::-webkit-progress-value {
@@ -176,10 +222,10 @@
 @layer utilities {
   .scrollbar-subtle {
     scrollbar-width: thin;
-    scrollbar-color: #c7cdd6 transparent;
+    scrollbar-color: var(--scrollbar) transparent;
   }
 
   .health-gauge {
-    background: conic-gradient(from 270deg at 50% 100%, var(--primary) 0deg 176deg, #e7ebf0 176deg 180deg, transparent 180deg 360deg);
+    background: conic-gradient(from 270deg at 50% 100%, var(--primary) 0deg 176deg, var(--progress-track) 176deg 180deg, transparent 180deg 360deg);
   }
 }

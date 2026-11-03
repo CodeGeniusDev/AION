@@ -1,23 +1,51 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, Bot, Check, Loader2, Monitor, Save, Settings2 } from "lucide-react";
+import {
+  Bell,
+  Bot,
+  Check,
+  Loader2,
+  Monitor,
+  Save,
+  Settings2,
+} from "lucide-react";
 import { getHealth, getSettings, updateSettings } from "@/services/api";
 import type { AppSettings } from "@/types";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/layout/page-header";
 import { SectionCard } from "@/components/ui/section-card";
+import { useTheme, type Theme } from "@/components/layout/theme-provider";
 
-function Toggle({ label, description, checked, onChange }: { label: string; description: string; checked: boolean; onChange: (value: boolean) => void }) {
+function Toggle({
+  label,
+  description,
+  checked,
+  onChange,
+}: {
+  label: string;
+  description: string;
+  checked: boolean;
+  onChange: (value: boolean) => void;
+}) {
   return (
     <label className="flex cursor-pointer items-center gap-4 py-3">
       <span>
         <span className="block text-sm font-medium">{label}</span>
-        <span className="mt-1 block text-xs text-muted-text">{description}</span>
+        <span className="mt-1 block text-xs text-muted-text">
+          {description}
+        </span>
       </span>
-      <span className={`relative ml-auto h-7 w-12 rounded-full transition-colors ${checked ? "bg-primary" : "bg-[#d8dde4]"}`}>
-        <input type="checkbox" className="peer sr-only" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-        <span className={`absolute top-1 grid size-5 place-items-center rounded-full bg-white text-primary shadow-sm transition-transform ${checked ? "translate-x-6" : "translate-x-1"}`}>
+      <span
+        className={`relative ml-auto h-7 w-12 rounded-full transition-colors ${checked ? "bg-primary" : "bg-border"}`}>
+        <input
+          type="checkbox"
+          className="peer sr-only"
+          checked={checked}
+          onChange={(e) => onChange(e.target.checked)}
+        />
+        <span
+          className={`absolute top-1 grid size-5 place-items-center rounded-full bg-white text-primary shadow-sm transition-transform ${checked ? "translate-x-6" : "translate-x-1"}`}>
           {checked && <Check className="size-3" />}
         </span>
       </span>
@@ -38,6 +66,7 @@ const defaultSettings: AppSettings = {
 };
 
 export function SettingsView() {
+  const { theme, setTheme } = useTheme();
   const [settings, setSettings] = useState<AppSettings>(defaultSettings);
   const [modelName, setModelName] = useState("");
   const [loading, setLoading] = useState(true);
@@ -50,7 +79,9 @@ export function SettingsView() {
         setSettings(s);
         setModelName(h.model_name || "");
       })
-      .catch(() => { /* use defaults */ })
+      .catch(() => {
+        /* use defaults */
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -76,7 +107,11 @@ export function SettingsView() {
   if (loading) {
     return (
       <>
-        <PageHeader eyebrow="System preferences" title="Settings" description="Tune AION's workspace behavior and interface for this device." />
+        <PageHeader
+          eyebrow="System preferences"
+          title="Settings"
+          description="Tune AION's workspace behavior and interface for this device."
+        />
         <div className="flex h-64 items-center justify-center">
           <Loader2 className="size-6 animate-spin text-primary" />
         </div>
@@ -92,13 +127,22 @@ export function SettingsView() {
         description="Tune AION's workspace behavior and interface for this device."
         action={
           <Button onClick={handleSave} disabled={saving}>
-            {saving ? <Loader2 className="mr-2 size-4 animate-spin" /> : saved ? <Check className="mr-2 size-4" /> : <Save className="mr-2 size-4" />}
+            {saving ? (
+              <Loader2 className="mr-2 size-4 animate-spin" />
+            ) : saved ? (
+              <Check className="mr-2 size-4" />
+            ) : (
+              <Save className="mr-2 size-4" />
+            )}
             {saving ? "Saving..." : saved ? "Saved" : "Save Changes"}
           </Button>
         }
       />
       <div className="grid gap-5 p-4 sm:p-6 lg:grid-cols-2 lg:p-7">
-        <SectionCard title="General" description="Basic workspace preferences" action={<Settings2 className="size-5 text-primary" />}>
+        <SectionCard
+          title="General"
+          description="Basic workspace preferences"
+          action={<Settings2 className="size-5 text-primary" />}>
           <div className="space-y-4">
             <label className="block text-xs font-medium">
               Workspace name
@@ -113,8 +157,7 @@ export function SettingsView() {
               <select
                 value={settings.default_view}
                 onChange={(e) => update("default_view", e.target.value)}
-                className="mt-2 h-11 w-full rounded-full border bg-white px-4 text-sm"
-              >
+                className="mt-2 h-11 w-full rounded-full border bg-surface px-4 text-sm">
                 <option value="dashboard">Dashboard</option>
                 <option value="chat">AI Chat</option>
                 <option value="tasks">Tasks</option>
@@ -123,15 +166,23 @@ export function SettingsView() {
           </div>
         </SectionCard>
 
-        <SectionCard title="AI Model" description="Active model from backend configuration" action={<Bot className="size-5 text-primary" />}>
+        <SectionCard
+          title="AI Model"
+          description="Active model from backend configuration"
+          action={<Bot className="size-5 text-primary" />}>
           <label className="block text-xs font-medium">
             Active model (read-only from backend)
-            <div className="mt-2 h-11 w-full rounded-full border bg-[#f4f7fb] px-4 text-sm leading-[44px] text-muted-text">
+            <div className="mt-2 h-11 w-full rounded-full border bg-muted px-4 text-sm leading-[44px] text-muted-text">
               {modelName || settings.preferred_model}
             </div>
           </label>
-          <div className="mt-4 rounded-[18px] bg-[#f4f7fb] p-4 text-xs leading-5 text-muted-text">
-            Model selection is driven by the backend configuration. To change the active model, update the <code className="rounded bg-white px-1 text-[10px]">GeminiService</code> model in the API codebase.
+          <div className="mt-4 rounded-[18px] bg-muted p-4 text-xs leading-5 text-muted-text">
+            Model selection is driven by the backend configuration. To change
+            the active model, update the{" "}
+            <code className="rounded bg-surface px-1 text-[10px]">
+              GeminiService
+            </code>{" "}
+            model in the API codebase.
           </div>
           <div className="mt-4 space-y-2 divide-y">
             <Toggle
@@ -149,22 +200,33 @@ export function SettingsView() {
           </div>
         </SectionCard>
 
-        <SectionCard title="Appearance" description="Choose how the workspace feels" action={<Monitor className="size-5 text-primary" />}>
+        <SectionCard
+          title="Appearance"
+          description="Choose how the workspace feels"
+          action={<Monitor className="size-5 text-primary" />}>
           <div className="grid grid-cols-3 gap-2">
-            {(["light", "system", "dim"] as const).map((mode) => (
+            {(["light", "dark", "system"] as const).map((mode) => (
               <button
                 key={mode}
                 type="button"
-                onClick={() => update("theme", mode)}
-                className={`rounded-[18px] border p-3 text-xs font-medium capitalize ${settings.theme === mode ? "border-primary bg-[#edf3ff] text-primary" : "bg-white"}`}
-              >
+                onClick={() => {
+                  setTheme(mode as Theme);
+                  // Keep local settings mirror in sync so a later Save doesn't
+                  // overwrite the theme with a stale value.
+                  update("theme", mode);
+                }}
+                aria-pressed={theme === mode}
+                className={`rounded-[18px] border p-3 text-xs font-medium capitalize ${theme === mode ? "border-primary bg-soft-blue text-foreground ring-1 ring-primary/30" : "bg-surface"}`}>
                 {mode}
               </button>
             ))}
           </div>
         </SectionCard>
 
-        <SectionCard title="Notifications" description="Control system updates" action={<Bell className="size-5 text-primary" />}>
+        <SectionCard
+          title="Notifications"
+          description="Control system updates"
+          action={<Bell className="size-5 text-primary" />}>
           <div className="divide-y">
             <Toggle
               label="Task completions"

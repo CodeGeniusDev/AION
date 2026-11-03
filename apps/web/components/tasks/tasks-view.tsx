@@ -105,7 +105,7 @@ export function TasksView() {
         <ApprovalQueue />
         {selectedTaskId ? (
           /* ── Task Detail View ── */
-          <section className="rounded-[24px] border bg-white p-5 sm:p-6">
+          <section className="rounded-[24px] border bg-surface p-5 sm:p-6">
             <button
               type="button"
               onClick={() => setSelectedTaskId(null)}
@@ -146,7 +146,7 @@ export function TasksView() {
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-3">
-                  <div className="rounded-[16px] bg-[#f4f7fb] p-4">
+                  <div className="rounded-[16px] bg-muted p-4">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-text">
                       Assigned Agent
                     </p>
@@ -154,7 +154,7 @@ export function TasksView() {
                       {taskDetail.agent}
                     </p>
                   </div>
-                  <div className="rounded-[16px] bg-[#f4f7fb] p-4">
+                  <div className="rounded-[16px] bg-muted p-4">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-text">
                       Confidence
                     </p>
@@ -162,7 +162,7 @@ export function TasksView() {
                       {taskDetail.confidence}%
                     </p>
                   </div>
-                  <div className="rounded-[16px] bg-[#f4f7fb] p-4">
+                  <div className="rounded-[16px] bg-muted p-4">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-text">
                       Created
                     </p>
@@ -215,7 +215,7 @@ export function TasksView() {
                         </p>
                       )}
                       {taskDetail.output.data && (
-                        <pre className="mt-2 rounded bg-gray-50 p-2 text-xs overflow-auto max-h-40">
+                        <pre className="mt-2 max-h-40 overflow-auto rounded-xl border bg-muted p-2 text-xs text-foreground">
                           {JSON.stringify(taskDetail.output.data, null, 2)}
                         </pre>
                       )}
@@ -227,9 +227,9 @@ export function TasksView() {
           </section>
         ) : (
           /* ── Task List View ── */
-          <section className="rounded-[24px] border bg-white p-5 sm:p-6">
+          <section className="rounded-[24px] border bg-surface p-5 sm:p-6">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div className="flex flex-wrap gap-1 rounded-full bg-[#f2f4f7] p-1">
+              <div className="flex flex-wrap gap-1 rounded-full bg-muted p-1">
                 {(["all", "completed", "running", "failed"] as Filter[]).map(
                   (item) => (
                     <button
@@ -239,7 +239,7 @@ export function TasksView() {
                       className={cn(
                         "rounded-full px-4 py-2 text-[11px] font-medium capitalize",
                         filter === item
-                          ? "bg-white shadow-sm"
+                          ? "bg-surface shadow-sm"
                           : "text-muted-text",
                       )}>
                       {item}

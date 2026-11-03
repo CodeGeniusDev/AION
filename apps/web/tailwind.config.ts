@@ -42,6 +42,31 @@ export default {
         "soft-peach": "var(--soft-peach)",
         "soft-grey": "var(--soft-grey)",
         "soft-green": "var(--soft-green)",
+        "surface-2": "var(--surface-2)",
+        success: {
+          soft: "var(--success-soft)",
+          text: "var(--success-text)",
+          border: "var(--success-border)",
+          solid: "var(--success-solid)",
+        },
+        warning: {
+          soft: "var(--warning-soft)",
+          text: "var(--warning-text)",
+          border: "var(--warning-border)",
+          solid: "var(--warning-solid)",
+        },
+        danger: {
+          soft: "var(--danger-soft)",
+          text: "var(--danger-text)",
+          border: "var(--danger-border)",
+          solid: "var(--danger-solid)",
+        },
+        info: {
+          soft: "var(--info-soft)",
+          text: "var(--info-text)",
+          border: "var(--info-border)",
+        },
+        "neutral-solid": "var(--neutral-solid)",
       },
       borderRadius: {
         lg: "var(--radius)",
