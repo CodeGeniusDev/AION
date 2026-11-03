@@ -9,6 +9,7 @@ from models.chat import ChatRequest, ChatResponse
 from observability.logging_config import get_logger
 from observability.rate_limiter import InMemoryRateLimiter
 from orchestration.workflow_runner import WorkflowRunner
+from security.redaction import redact_text
 
 router = APIRouter(tags=["chat"])
 workflow_runner = WorkflowRunner()
@@ -57,6 +58,19 @@ async def chat(
     tenant_id = resolve_tenant_id(principal)
     logger.info("chat_request_received mode=%s tenant_id=%s authenticated=%s", payload.mode, tenant_id, principal is not None)
 
+    # Phase 1F: Secret Guard. Credentials are stripped at the request
+    # boundary BEFORE anything downstream can observe the raw value —
+    # conversation store, workflow runner (Gemini prompt, agents, bus,
+    # memory), approval hook and alert previews all see only the
+    # redacted text. Detection requires a secret-shaped value; ordinary
+    # mentions ("password reset flow") pass through untouched.
+    redaction = redact_text(payload.message)
+    if redaction.redacted:
+        payload = payload.model_copy(update={"message": redaction.text})
+        logger.info(
+            "chat_secret_redacted kinds=%s tenant_id=%s", list(redaction.labels), tenant_id,
+        )
+
     # Load conversation history for multi-turn context
     history_context: list[str] = []
     if payload.conversation_id:
@@ -95,6 +109,10 @@ async def chat(
 
     # Override the conversation_id with our persisted one
     response.conversation_id = convo_id
+
+    # Phase 1F: tell the UI which credential kinds were removed. The
+    # answer itself was generated from the redacted message only.
+    response.warnings = [f"{kind} removed" for kind in redaction.labels]
 
     # Save assistant response
     if response.status == "completed":

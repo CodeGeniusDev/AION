@@ -71,3 +71,7 @@ class ChatResponse(BaseModel):
     # Phase 2: set when the chat message created a pending desktop
     # approval. Optional + additive — existing clients ignore it.
     pending_approval: PendingApprovalInfo | None = None
+    # Phase 1F: Secret Guard. Kinds of credentials removed from the
+    # message before it reached any store, log or model call. Optional +
+    # additive — existing clients ignore it.
+    warnings: list[str] = Field(default_factory=list)
