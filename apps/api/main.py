@@ -13,6 +13,7 @@ from routes.agents import router as agents_router
 from routes.approvals import router as approvals_router
 from routes.schedules import router as schedules_router
 from routes.voice import router as voice_router
+from routes.test_fixture import router as test_fixture_router
 from routes.chat import router as chat_router
 from routes.alerts import router as alerts_router
 from routes.dashboard import router as dashboard_router
@@ -92,6 +93,11 @@ app.include_router(desktop_router, prefix="/api")
 app.include_router(approvals_router, prefix="/api")
 app.include_router(schedules_router, prefix="/api")
 app.include_router(voice_router, prefix="/api")
+# Phase 2A: /api/_test/* fixture endpoints. Handlers self-guard with
+# AION_TEST_MODE and return 404 when the flag is off, so the router is
+# always safe to include — production traffic can never distinguish it
+# from any unknown path.
+app.include_router(test_fixture_router, prefix="/api")
 
 # Phase 5 scheduler: no-op unless AION_SCHEDULER_ENABLED=1. Fires create
 # PENDING approvals only — execution still requires a human decision.
