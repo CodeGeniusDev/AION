@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ArrowLeft, Search } from "lucide-react";
 import { getTask, getTasks } from "@/services/api";
 import type { RecentTask, TaskDetail, TaskStatus } from "@/types";
@@ -8,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { PageHeader } from "@/components/layout/page-header";
+import { usePageSearch } from "@/components/layout/page-search-provider";
 import { ApprovalQueue } from "@/components/approvals/approval-queue";
 import { RecentTaskRow } from "@/components/dashboard/recent-task-row";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -16,6 +18,8 @@ import { cn } from "@/utils/cn";
 type Filter = "all" | TaskStatus;
 
 export function TasksView() {
+  const searchParams = useSearchParams();
+  const { matches } = usePageSearch();
   const [allTasks, setAllTasks] = useState<RecentTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -74,14 +78,21 @@ export function TasksView() {
     };
   }, [selectedTaskId]);
 
+  // Deep links from global search (/tasks?open=ID) open the real task detail.
+  useEffect(() => {
+    const open = searchParams.get("open");
+    if (open) setSelectedTaskId(open);
+  }, [searchParams]);
+
   const tasks = useMemo(
     () =>
       allTasks.filter(
         (task) =>
           (filter === "all" || task.status === filter) &&
-          task.title.toLowerCase().includes(query.toLowerCase()),
+          task.title.toLowerCase().includes(query.toLowerCase()) &&
+          matches(task.title, task.agent),
       ),
-    [allTasks, filter, query],
+    [allTasks, filter, query, matches],
   );
 
   return (

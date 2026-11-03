@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   MessageCircleMore,
   Mic,
@@ -26,6 +27,7 @@ import type {
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
+import { usePageSearch } from "@/components/layout/page-search-provider";
 import { firstNameOf, useProfile } from "@/components/profile/profile-provider";
 import { AionMessage } from "./aion-message";
 import { ChatErrorState } from "./chat-error-state";
@@ -36,6 +38,8 @@ import { speechRecognitionSupported, startDictation, type Dictation } from "@/ut
 
 export function ChatView() {
   const { configured, profile } = useProfile();
+  const searchParams = useSearchParams();
+  const { matches } = usePageSearch();
   const [activeChat, setActiveChat] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -99,7 +103,7 @@ export function ChatView() {
   }, [refreshConversations]);
 
   // Load a conversation's messages
-  async function loadConversation(convoId: string) {
+  const loadConversation = useCallback(async (convoId: string) => {
     try {
       const stored = await getConversationMessages(convoId);
       const loaded: ChatMessage[] = stored.map((msg, idx) =>
@@ -137,7 +141,7 @@ export function ChatView() {
     } catch {
       // conversation not found
     }
-  }
+  }, []);
 
   async function handleDeleteConversation(convoId: string) {
     try {
@@ -226,6 +230,25 @@ export function ChatView() {
     setConversationId(undefined);
     setSseTaskId(null);
   }
+  const startFreshRef = useRef(startFresh);
+  startFreshRef.current = startFresh;
+
+  // Deep links from global search: /chat?c=ID opens that real conversation;
+  // the "New conversation" quick action uses /chat?c=new.
+  const handledLinkRef = useRef<string | null>(null);
+  useEffect(() => {
+    const c = searchParams.get("c");
+    if (!c || handledLinkRef.current === c) return;
+    handledLinkRef.current = c;
+    if (c === "new") startFreshRef.current();
+    else void loadConversation(c);
+  }, [searchParams, loadConversation]);
+
+  // "This page" scope filters the conversation list by title.
+  const visibleConversations = useMemo(
+    () => conversations.filter((convo) => matches(convo.title)),
+    [conversations, matches],
+  );
   function previousUserMessage(index: number) {
     for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
       const message = messages[cursor];
@@ -272,9 +295,13 @@ export function ChatView() {
             <p className="mt-3 px-2 text-[10px] leading-5 text-muted-text">
               No conversations yet.
             </p>
+          ) : visibleConversations.length === 0 ? (
+            <p className="mt-3 px-2 text-[10px] leading-5 text-muted-text">
+              No conversations match the search.
+            </p>
           ) : (
             <ul className="mt-3 space-y-1">
-              {conversations.map((convo) => (
+              {visibleConversations.map((convo) => (
                 <li key={convo.conversation_id}>
                   <button
                     type="button"

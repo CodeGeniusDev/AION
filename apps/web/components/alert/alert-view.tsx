@@ -19,6 +19,7 @@ import {
 } from "@/services/api";
 import type { AlertItem } from "@/types";
 import { PageHeader } from "@/components/layout/page-header";
+import { usePageSearch } from "@/components/layout/page-search-provider";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
@@ -35,6 +36,7 @@ const toneMap: Record<string, string> = {
 };
 
 export function AlertView() {
+  const { active: pageFilterActive, matches } = usePageSearch();
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -59,8 +61,10 @@ export function AlertView() {
   const unreadCount = alerts.filter((alert) => alert.unread).length;
   const visibleAlerts = useMemo(
     () =>
-      filter === "unread" ? alerts.filter((alert) => alert.unread) : alerts,
-    [alerts, filter],
+      alerts
+        .filter((alert) => filter === "all" || alert.unread)
+        .filter((alert) => matches(alert.title, alert.description, alert.category)),
+    [alerts, filter, matches],
   );
 
   function handleMarkAllAsRead() {
@@ -250,12 +254,16 @@ export function AlertView() {
                 <Bell className="size-5" />
               </span>
               <h3 className="mt-4 text-base font-semibold">
-                You&apos;re all caught up
+                {pageFilterActive && alerts.length > 0
+                  ? "No notifications match the search"
+                  : "You're all caught up"}
               </h3>
               <p className="mt-1 max-w-xs text-sm leading-6 text-muted-text">
-                {filter === "unread"
-                  ? "There are no unread notifications waiting for you."
-                  : "No notifications yet. Complete a task in Chat to see activity here."}
+                {pageFilterActive && alerts.length > 0
+                  ? "Nothing on this page matches the current filter. Clear the search to see all notifications again."
+                  : filter === "unread"
+                    ? "There are no unread notifications waiting for you."
+                    : "No notifications yet. Complete a task in Chat to see activity here."}
               </p>
             </div>
           )}

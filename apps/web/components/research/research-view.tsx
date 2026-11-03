@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowUpRight, FileText, FlaskConical, Lightbulb, Lock } from "lucide-react";
 import { getResearch } from "@/services/api";
 import type { ResearchNote } from "@/types";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/layout/page-header";
+import { usePageSearch } from "@/components/layout/page-search-provider";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -13,6 +14,7 @@ import { Tooltip } from "@/components/ui/tooltip";
 const tones = ["bg-soft-blue", "bg-soft-green", "bg-soft-peach"];
 
 export function ResearchView() {
+  const { active, matches } = usePageSearch();
   const [notes, setNotes] = useState<ResearchNote[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -38,6 +40,11 @@ export function ResearchView() {
       mounted = false;
     };
   }, [loadAttempt]);
+
+  const visibleNotes = useMemo(
+    () => notes.filter((note) => matches(note.title, note.type)),
+    [notes, matches],
+  );
 
   return (
     <>
@@ -80,9 +87,9 @@ export function ResearchView() {
                   }
                 />
               </div>
-            ) : notes.length ? (
+            ) : visibleNotes.length ? (
               <div className="mt-5 divide-y">
-                {notes.map((note, index) => (
+                {visibleNotes.map((note, index) => (
                   <article key={note.id} className="flex items-center gap-4 py-4">
                     <span className={`grid size-11 shrink-0 place-items-center rounded-[17px] ${tones[index % tones.length]}`}>
                       <FileText className="size-4" />
@@ -106,7 +113,12 @@ export function ResearchView() {
               </div>
             ) : (
               <div className="mt-5">
-                <EmptyState title="No research notes yet" description="Verified research findings from AION will appear here once available." />
+                <EmptyState
+                  title={active && notes.length ? "No notes match the search" : "No research notes yet"}
+                  description={active && notes.length
+                    ? "Nothing on this page matches the current filter. Clear the search to see all notes again."
+                    : "Verified research findings from AION will appear here once available."}
+                />
               </div>
             )}
           </section>

@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Activity,
   RefreshCw,
@@ -16,6 +17,7 @@ import {
 } from "@/services/api";
 import type { ApprovalRecord, AuditEvent, DesktopHealth } from "@/types";
 import { PageHeader } from "@/components/layout/page-header";
+import { usePageSearch } from "@/components/layout/page-search-provider";
 import { ApprovalQueue } from "@/components/approvals/approval-queue";
 import { SchedulesPanel } from "@/components/desktop/schedules-panel";
 import { SectionCard } from "@/components/ui/section-card";
@@ -54,6 +56,8 @@ function formatTime(iso: string): string {
 }
 
 export function DesktopView() {
+  const searchParams = useSearchParams();
+  const { matches } = usePageSearch();
   // ── Bridge health ──
   const [health, setHealth] = useState<DesktopHealth | null>(null);
   const [healthState, setHealthState] = useState<SectionState>("loading");
@@ -147,6 +151,22 @@ export function DesktopView() {
     void loadHistory();
     void loadAudit();
   };
+
+  // "This page" scope filters the real history rows by tool, id or status.
+  const visibleHistory = useMemo(
+    () => history.filter((item) => matches(item.tool, item.id, item.status)),
+    [history, matches],
+  );
+
+  // Deep links from global search (/desktop?approval=ID) scroll to that
+  // ledger row. Pending items are already visible in the live queue above.
+  const approvalParam = searchParams.get("approval");
+  useEffect(() => {
+    if (!approvalParam || historyState !== "ready") return;
+    document
+      .getElementById(`approval-row-${approvalParam}`)
+      ?.scrollIntoView({ block: "center" });
+  }, [approvalParam, historyState, visibleHistory]);
 
   return (
     <>
@@ -244,10 +264,21 @@ export function DesktopView() {
                 title="No desktop actions yet"
                 description="Ask AION in chat to do something on your machine — it will show up here as a pending approval, never as a silent execution."
               />
+            ) : visibleHistory.length === 0 ? (
+              <EmptyState
+                title="No history rows match the search"
+                description="Nothing on this page matches the current filter. Clear the search to see the full ledger again."
+              />
             ) : (
               <ul className="space-y-3">
-                {history.map((item) => (
-                  <li key={item.id} className="rounded-[16px] border p-4">
+                {visibleHistory.map((item) => (
+                  <li
+                    key={item.id}
+                    id={`approval-row-${item.id}`}
+                    className={cn(
+                      "rounded-[16px] border p-4",
+                      approvalParam === item.id && "border-primary bg-soft-blue/40",
+                    )}>
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="text-sm font-semibold">{item.tool}</p>
                       <StatusBadge status={item.status} />

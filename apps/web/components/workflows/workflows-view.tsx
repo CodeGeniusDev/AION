@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ArrowUpRight, Loader2, Network, Plus, Route, X } from "lucide-react";
 import { createWorkflow, getWorkflows, runWorkflow } from "@/services/api";
 import type { WorkflowData, WorkflowRunResult } from "@/types";
@@ -9,6 +10,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { PageHeader } from "@/components/layout/page-header";
+import { usePageSearch } from "@/components/layout/page-search-provider";
 import { Tooltip } from "@/components/ui/tooltip";
 
 // Only the model-safe agents the backend workflow whitelist accepts. A
@@ -127,6 +129,8 @@ function RunPanel({ result }: { result: WorkflowRunResult }) {
 }
 
 export function WorkflowsView() {
+  const searchParams = useSearchParams();
+  const { matches } = usePageSearch();
   const [workflows, setWorkflows] = useState<WorkflowData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -137,6 +141,23 @@ export function WorkflowsView() {
   const [running, setRunning] = useState(false);
   const [results, setResults] = useState<Record<string, WorkflowRunResult>>({});
   const [runError, setRunError] = useState<string | null>(null);
+
+  const visibleWorkflows = useMemo(
+    () => workflows.filter((w) => matches(w.name, w.description ?? "")),
+    [workflows, matches],
+  );
+
+  // Deep links from global search: /workflows?open=ID opens that workflow's
+  // run panel; /workflows?new=1 (quick action) opens the real create form.
+  useEffect(() => {
+    if (searchParams.get("new") === "1") setCreating(true);
+    const open = searchParams.get("open");
+    if (open) {
+      setRunningId(open);
+      setRunInput("");
+      setRunError(null);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     let mounted = true;
@@ -228,9 +249,14 @@ export function WorkflowsView() {
             description="Create your first reusable agent path to see it here."
             action={<Button size="sm" onClick={() => setCreating(true)}>New Workflow</Button>}
           />
+        ) : visibleWorkflows.length === 0 ? (
+          <EmptyState
+            title="No workflows match the search"
+            description="Nothing on this page matches the current filter. Clear the search to see all workflows again."
+          />
         ) : (
           <div className="grid gap-5 lg:grid-cols-3">
-            {workflows.map((workflow, index) => {
+            {visibleWorkflows.map((workflow, index) => {
               const result = workflow.id ? results[workflow.id] : undefined;
               const isOpen = runningId === workflow.id;
               return (

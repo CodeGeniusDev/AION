@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   ArrowUpRight,
   BookOpenCheck,
@@ -18,17 +19,31 @@ import { ProgressIndicator } from "@/components/ui/progress-indicator";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { PageHeader } from "@/components/layout/page-header";
+import { usePageSearch } from "@/components/layout/page-search-provider";
 import { Tooltip } from "@/components/ui/tooltip";
 
 const icons = [Compass, BookOpenCheck, Brain, Database];
 const tones = ["bg-soft-peach", "bg-soft-blue", "bg-soft-grey", "bg-soft-green"];
 
 export function AgentsView() {
+  const searchParams = useSearchParams();
+  const { active, matches } = usePageSearch();
   const [agents, setAgents] = useState<AgentCardData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
+
+  const visibleAgents = useMemo(
+    () => agents.filter((agent) => matches(agent.name, agent.specialty, agent.description)),
+    [agents, matches],
+  );
+
+  // Deep links from global search (/agents?open=ID) expand that agent's card.
+  useEffect(() => {
+    const open = searchParams.get("open");
+    if (open) setExpandedAgent(open);
+  }, [searchParams]);
 
   useEffect(() => {
     let mounted = true;
@@ -83,7 +98,15 @@ export function AgentsView() {
           />
         ) : (
           <div className="grid gap-5 sm:grid-cols-2">
-            {agents.map((agent, index) => {
+            {active && visibleAgents.length === 0 ? (
+              <div className="sm:col-span-2">
+                <EmptyState
+                  title="No agents match the search"
+                  description="Nothing on this page matches the current filter. Clear the search to see all agents again."
+                />
+              </div>
+            ) : null}
+            {visibleAgents.map((agent, index) => {
               const Icon = icons[index % icons.length];
               const isExpanded = expandedAgent === (agent.id ?? agent.name);
               return (

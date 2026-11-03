@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ArrowUpRight, BrainCircuit, Database, HardDrive, Search, Trash2, X } from "lucide-react";
 import {
   deleteMemoryRecord,
@@ -12,14 +13,18 @@ import type { MemoryCategory, MemoryRecordOut } from "@/types";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
+import { usePageSearch } from "@/components/layout/page-search-provider";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { ProgressIndicator } from "@/components/ui/progress-indicator";
 import { SectionCard } from "@/components/ui/section-card";
+import { cn } from "@/utils/cn";
 
 const icons = [BrainCircuit, HardDrive, Database];
 const tones = ["bg-soft-peach", "bg-soft-blue", "bg-soft-green"];
 
 export function MemoryView() {
+  const searchParams = useSearchParams();
+  const { active, matches } = usePageSearch();
   const [categories, setCategories] = useState<MemoryCategory[]>([]);
   const [policies, setPolicies] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,6 +37,12 @@ export function MemoryView() {
   const [recordsLoading, setRecordsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showRecords, setShowRecords] = useState(false);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+
+  const visibleCategories = useMemo(
+    () => categories.filter((category) => matches(category.title, category.description)),
+    [categories, matches],
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -78,6 +89,23 @@ export function MemoryView() {
     setShowRecords(true);
     void loadRecords();
   }
+
+  // Deep links from global search (/memory?record=ID) open the records
+  // browser and highlight the real row once it loads.
+  useEffect(() => {
+    const record = searchParams.get("record");
+    if (!record) return;
+    setShowRecords(true);
+    setHighlightId(record);
+    void loadRecords();
+  }, [searchParams, loadRecords]);
+
+  useEffect(() => {
+    if (!highlightId || recordsLoading) return;
+    document
+      .getElementById(`memory-record-${highlightId}`)
+      ?.scrollIntoView({ block: "center" });
+  }, [highlightId, recordsLoading, records]);
 
   function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -128,7 +156,15 @@ export function MemoryView() {
         ) : (
           <>
             <div className="mt-5 grid gap-5 lg:grid-cols-3">
-              {categories.map((category, index) => {
+              {active && visibleCategories.length === 0 ? (
+                <div className="lg:col-span-3">
+                  <EmptyState
+                    title="No memory categories match the search"
+                    description="Nothing on this page matches the current filter. Clear the search to see everything again."
+                  />
+                </div>
+              ) : null}
+              {visibleCategories.map((category, index) => {
                 const Icon = icons[index % icons.length];
                 return (
                   <article
@@ -230,7 +266,12 @@ export function MemoryView() {
                       {records.map((record) => (
                         <div
                           key={record.memory_id}
-                          className="flex items-start gap-3 py-3">
+                          id={`memory-record-${record.memory_id}`}
+                          className={cn(
+                            "flex items-start gap-3 py-3",
+                            highlightId === record.memory_id &&
+                              "rounded-[16px] bg-soft-blue/40 px-3",
+                          )}>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
                               <span className="rounded-full bg-muted px-2 py-0.5 text-[9px] font-medium text-primary">
