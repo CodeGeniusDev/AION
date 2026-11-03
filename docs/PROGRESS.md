@@ -42,6 +42,16 @@ persists across reload (header.spec); raw credential scan over all 17 live
 conversations: 0 messages contain the raw secret, 10 contain the redacted
 marker.
 
+## UI Overhaul — Phase 2 (Real-time layer + truthful live status)
+
+Branch `abdullah` continued (PR #1 open). Plan: `docs/plans/ui-phase2.md`.
+Same five-gate discipline per sub-step; hard rules from Phase 1 still apply
+(approval gate untouched, no demo data, additive APIs, no new deps).
+
+| Sub-step        | Delivered                                                                                                                                                                                                                                                                                                                                                                                             | Commits             | Gate results at sub-step close                                                                                     |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| 2A Test isolation | Playwright `webServer` array boots an isolated API on `127.0.0.1:3124` + Next dev on `:3123` with per-invocation `mkdtempSync(tmpdir(),"aion-e2e-")` for every SQLite file (memory/approval/profile/workflow/schedule); `AION_TEST_MODE=1` unlocks `POST /api/_test/{reset,seed/task,seed/alert,seed/conversation,seed/profile}`; `test_test_fixture_phase2a.py` proves 404 when the flag is off; six state-conditioned `test.skip()` calls replaced with deterministic `beforeEach` seed; `scripts/purge-test-data.md` documents cleanup; `FRONTEND_ORIGIN` pinned to the E2E port so CORS matches | `feat(api): phase2a fixture endpoints…`, `chore(web): phase2a playwright isolation…`, `docs: phase2a purge guide` | api 606 passed · desktop 61/2 · tsc 0 · lint clean · Playwright **55 passed, 0 skipped** (1.4 m, isolated temp DBs) |
+
 ## Final gate state (as of HEAD `766c870`)
 
 ```
