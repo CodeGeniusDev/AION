@@ -21,6 +21,10 @@ class AlertItem(BaseModel):
     category: AlertCategory
     unread: bool = True
     tone: AlertTone = "info"
+    # Additive (Phase 1 header): ISO creation timestamp and optional
+    # in-app deep link. Older clients ignore both; absent stays neutral.
+    created_at: str = ""
+    link: str | None = None
 
 
 class AlertsResponse(BaseModel):

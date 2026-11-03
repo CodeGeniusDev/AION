@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Plus, Search } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { ArrowLeft, Search } from "lucide-react";
 import { getTask, getTasks } from "@/services/api";
 import type { RecentTask, TaskDetail, TaskStatus } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -17,7 +16,6 @@ import { cn } from "@/utils/cn";
 type Filter = "all" | TaskStatus;
 
 export function TasksView() {
-  const router = useRouter();
   const [allTasks, setAllTasks] = useState<RecentTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -92,12 +90,6 @@ export function TasksView() {
         eyebrow="Execution queue"
         title="Tasks"
         description="Track every request moving through the AION agent network."
-        action={
-          <Button onClick={() => router.push("/chat")}>
-            <Plus className="mr-2 size-4" />
-            New Task
-          </Button>
-        }
       />
       <div className="p-4 sm:p-6 lg:p-7">
         {/* Human-in-the-loop gate: visible wherever tasks live, on both list

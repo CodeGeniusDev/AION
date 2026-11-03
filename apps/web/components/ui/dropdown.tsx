@@ -65,12 +65,59 @@ export function Dropdown({
 }: DropdownProps) {
   const [open, setOpen] = useState(false);
   const ref = useDismiss<HTMLDivElement>(open, () => setOpen(false));
+  const panelRef = useRef<HTMLDivElement>(null);
+  // Element that had focus when the panel opened (always the trigger).
+  // Focus returns there on close so keyboard users never get stranded.
+  const restoreRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!open) {
+      restoreRef.current?.focus();
+      restoreRef.current = null;
+      return;
+    }
+    restoreRef.current = document.activeElement as HTMLElement | null;
+    const panel = panelRef.current;
+    const focusables = () =>
+      Array.from(
+        panel?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      );
+    focusables()[0]?.focus();
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Tab" && event.key !== "ArrowDown" && event.key !== "ArrowUp")
+        return;
+      const items = focusables();
+      if (items.length === 0) return;
+      const current = document.activeElement as HTMLElement | null;
+      const index = current ? items.indexOf(current) : -1;
+      if (event.key === "Tab") {
+        // Simple focus trap: cycle between first and last item.
+        event.preventDefault();
+        const next = event.shiftKey
+          ? items[(index - 1 + items.length) % items.length]
+          : items[(index + 1) % items.length];
+        next?.focus();
+      } else {
+        event.preventDefault();
+        const delta = event.key === "ArrowDown" ? 1 : -1;
+        items[(index + delta + items.length) % items.length]?.focus();
+      }
+    }
+    panel?.addEventListener("keydown", onKeyDown);
+    return () => panel?.removeEventListener("keydown", onKeyDown);
+  }, [open]);
 
   return (
     <div ref={ref} className={cn("relative", className)}>
-      {trigger({ open, toggle: () => setOpen((value) => !value) })}
+      {trigger({
+        open,
+        toggle: () => setOpen((value) => !value),
+      })}
       {open && (
         <div
+          ref={panelRef}
           role="dialog"
           aria-label={label}
           className={cn(

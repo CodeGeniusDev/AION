@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { MessageSquarePlus } from "lucide-react";
 import { getDashboard, getHealth } from "@/services/api";
 import type { DashboardData, HealthData, TaskStatus } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -19,7 +17,6 @@ import { cn } from "@/utils/cn";
 type Filter = "all" | TaskStatus;
 
 export function DashboardView() {
-  const router = useRouter();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -63,12 +60,6 @@ export function DashboardView() {
         eyebrow="Command center"
         title="Hello, Abdullah"
         description="Manage your Artificial Intelligence Operating Nervous System."
-        action={
-          <Button onClick={() => router.push("/chat")}>
-            <MessageSquarePlus className="mr-2 size-4" />
-            New Task
-          </Button>
-        }
       />
       <div className="p-4 sm:p-6 lg:p-7">
         {loading ? (

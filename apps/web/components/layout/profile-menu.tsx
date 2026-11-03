@@ -12,9 +12,10 @@ import {
   X,
   AlertTriangle,
   ChevronDown,
+  ShieldAlert,
   type LucideIcon,
 } from "lucide-react";
-import { getSettings, updateSettings } from "@/services/api";
+import { getHealth, getPendingApprovals, getSettings, updateSettings } from "@/services/api";
 import { Dropdown } from "@/components/ui/dropdown";
 import { useTheme, type Theme } from "@/components/layout/theme-provider";
 import { cn } from "@/utils/cn";
@@ -119,6 +120,9 @@ export function ProfileMenu() {
   const { theme, setTheme } = useTheme();
   const [workspaceName, setWorkspaceName] = useState<string>("AION Workspace");
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  // Real signals refreshed each time the menu opens; null until first load.
+  const [pendingApprovals, setPendingApprovals] = useState<number | null>(null);
+  const [appVersion, setAppVersion] = useState<string | null>(null);
 
   // Real identity signal available today: the workspace name from settings.
   useEffect(() => {
@@ -128,6 +132,15 @@ export function ProfileMenu() {
         // keep neutral fallback label
       });
   }, []);
+
+  function refreshLiveMeta() {
+    getPendingApprovals()
+      .then((r) => setPendingApprovals(r.total))
+      .catch(() => setPendingApprovals(null));
+    getHealth()
+      .then((h) => setAppVersion(h.version))
+      .catch(() => setAppVersion(null));
+  }
 
   async function handleThemeChange(next: Theme) {
     setTheme(next);
@@ -148,7 +161,10 @@ export function ProfileMenu() {
         trigger={({ open, toggle }) => (
           <button
             type="button"
-            onClick={toggle}
+            onClick={() => {
+              if (!open) refreshLiveMeta();
+              toggle();
+            }}
             aria-label="Open user menu"
             aria-expanded={open}
             className={cn(
@@ -193,6 +209,18 @@ export function ProfileMenu() {
                 label="Account settings"
                 onClick={close}
               />
+              <Link
+                href="/desktop"
+                onClick={close}
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm hover:bg-muted">
+                <ShieldAlert className="size-4 shrink-0 text-muted-text" />
+                <span>Desktop approvals</span>
+                {pendingApprovals !== null && pendingApprovals > 0 ? (
+                  <span className="ml-auto rounded-full bg-warning-soft px-2 py-0.5 text-[11px] font-semibold text-warning-text">
+                    {pendingApprovals}
+                  </span>
+                ) : null}
+              </Link>
               <MenuItem
                 icon={Keyboard}
                 label="Keyboard shortcuts"
@@ -238,6 +266,12 @@ export function ProfileMenu() {
                 </span>
               </div>
             </div>
+
+            {appVersion !== null ? (
+              <p className="px-3 pb-1 text-center text-[10px] text-muted-text">
+                AION v{appVersion}
+              </p>
+            ) : null}
           </div>
         )}
       </Dropdown>

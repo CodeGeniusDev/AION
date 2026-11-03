@@ -13,7 +13,7 @@
     --primary-foreground: #ffffff;
     --navy: #192438;
     --text: #111318;
-    --muted-text: #64666f;
+    --muted-text: #5b5d66;
     --border: #dfe3e8;
     --soft-blue: #cbdcff;
     --soft-peach: #fde7c5;
@@ -47,7 +47,7 @@
     --secondary: #edf2f8;
     --secondary-foreground: #192438;
     --muted: #f0f3f7;
-    --muted-foreground: #64666f;
+    --muted-foreground: #5b5d66;
     --accent: #edf2f8;
     --accent-foreground: #192438;
     --destructive: #d84444;

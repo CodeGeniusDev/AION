@@ -125,6 +125,7 @@ class ApprovalService:
                 ),
                 category="approval",
                 tone="warning",
+                link=f"/desktop?approval={record.id}",
             )
         except Exception:
             # Alerts are best-effort notification; the ledger row is the

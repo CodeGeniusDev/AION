@@ -43,10 +43,19 @@ class AlertStore:
                     category TEXT NOT NULL,
                     unread INTEGER NOT NULL DEFAULT 1,
                     tone TEXT NOT NULL DEFAULT 'info',
-                    created_at TEXT NOT NULL
+                    created_at TEXT NOT NULL,
+                    link TEXT NOT NULL DEFAULT ''
                 )
                 """
             )
+            # Additive column for databases created before `link` existed.
+            # SQLite has no IF NOT EXISTS for ALTER, so tolerate the dup.
+            try:
+                cursor.execute(
+                    "ALTER TABLE alerts ADD COLUMN link TEXT NOT NULL DEFAULT ''"
+                )
+            except sqlite3.OperationalError:
+                pass  # column already present (fresh schema or migrated)
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_alerts_unread ON alerts(unread)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_alerts_created_at ON alerts(created_at)")
 
@@ -62,7 +71,7 @@ class AlertStore:
 
     def create(
         self, *, title: str, description: str, category: str = "system",
-        tone: str = "info",
+        tone: str = "info", link: str | None = None,
     ) -> dict:
         """Create a new alert. Returns the created alert as a dict."""
         now = datetime.now(timezone.utc)
@@ -71,14 +80,15 @@ class AlertStore:
         with self._cursor() as cursor:
             cursor.execute(
                 """
-                INSERT INTO alerts (id, title, description, time, category, unread, tone, created_at)
-                VALUES (?, ?, ?, ?, ?, 1, ?, ?)
+                INSERT INTO alerts (id, title, description, time, category, unread, tone, created_at, link)
+                VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)
                 """,
-                (alert_id, title, description, time_str, category, tone, now.isoformat()),
+                (alert_id, title, description, time_str, category, tone, now.isoformat(), link or ""),
             )
         alert_data = {
             "id": alert_id, "title": title, "description": description,
             "time": time_str, "category": category, "unread": True, "tone": tone,
+            "created_at": now.isoformat(), "link": link or None,
         }
         try:
             from cognitive_bus.schema import CognitiveMessage
@@ -147,7 +157,10 @@ class AlertStore:
             title = "Task failed"
             description = f'AION could not complete: "{message_preview[:80]}"'
             tone = "error"
-        return self.create(title=title, description=description, category="task", tone=tone)
+        return self.create(
+            title=title, description=description, category="task", tone=tone,
+            link=f"/tasks?open={task_id}",
+        )
 
 
 def _row_to_dict(row: sqlite3.Row) -> dict:
@@ -159,6 +172,8 @@ def _row_to_dict(row: sqlite3.Row) -> dict:
         "category": row["category"],
         "unread": bool(row["unread"]),
         "tone": row["tone"],
+        "created_at": row["created_at"],
+        "link": row["link"] or None,
     }
 
 

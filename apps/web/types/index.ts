@@ -307,6 +307,9 @@ export interface AlertItem {
   category: AlertCategory;
   unread: boolean;
   tone: AlertTone;
+  // Additive Phase 1C fields from GET /api/alerts.
+  created_at?: string;
+  link?: string | null;
 }
 
 export interface AlertsResponse {
