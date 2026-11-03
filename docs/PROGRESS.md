@@ -19,6 +19,29 @@ comments.
 | 6 — Voice (graceful degradation)       | Browser Web Speech dictation → normal chat path (Phase 2 rules apply to voice); `/api/voice/status` + `/api/voice/say` (optional edge-tts, availability-as-data, never a crash); bridge voice executors honor config.yaml backends, request params ignored; "Speak" on answers                                   | `bdde84c`…`eefc7f6` (6 commits)                                           | pytest (7 + 5 new, mocked backends), tsc, lint, live E2E                                     | Live: real 33,264-byte MPEG layer III synthesized; dictated chat → pending → reject → no file; ExplodingBridge test proves voice never touches bridge/ledger; whisper/vosk NOT installed (>1 GB torch — owner decision) |
 | 7 — Social (scaffolding, dry-run only) | `social_post` protected approval-gated tool; official-API provider specs (Meta Graph FB/IG, Pinterest v5, TikTok Content Posting); OAuth2 state + PKCE S256; `TokenVault` `~/.aion` 0600 (symlink/perm refusal, redacted reprs); live requires config AND env secret AND vault token; chat whitelist + heuristic | `def7689`…`766c870` (6 commits, incl. `6d83f31` requirements honesty fix) | pytest (16 + 10 new, socket-blocked zero-network proof), tsc, lint, live E2E                 | Live: chat → pending → approve → bridge dry-run 0.1 ms, full audit chain, `~/.aion` never created, 0 secret/token matches in logs; spoofed `"live": true` inert                                                         |
 
+## UI Overhaul — Phase 1 (Foundation + Header + Profile)
+
+Branch `abdullah` continued (PR #1 open). Plan: `docs/plans/ui-phase1.md`.
+Every sub-step ended with the five gates (api pytest, desktop pytest, tsc,
+lint, Playwright) green before committing; all data shown is real —
+test data lives only in temp/in-memory DBs.
+
+| Sub-step | Delivered | Commits | Gate results at sub-step close |
+| --- | --- | --- | --- |
+| 1A Audit | Hardcoded-color inventory (grep count + file list), header-control audit, existing-route audit; plan written | `6aa2bdd`…`fffaadf` (scaffold) | docs only |
+| 1B Theme | Semantic light/dark tokens in globals.css + tailwind map, `color-scheme`, ThemeProvider (light/dark/system, `aion-theme`, no-flash inline script, live system tracking), backend settings accept `dark` (legacy `dim` normalized), every `bg-white`/hex replaced, contrast/luminance sweep over 11 routes × 2 themes | `8724865`, `3a5c081` | all five gates green (raw tails in the PR #1 Phase-1B comment) |
+| 1C Header | Real notifications bell (unread count, 9+ cap, popover of latest 8, mark read/delete/view-all, relative `created_at` + additive `link` on alerts, `useNotifications` 15 s poll paused when hidden), theme button (sun/moon/monitor, aria-pressed), user menu with real profile + approvals count + theme segments + version (no fake sign-out), settings link active state, mobile reachability, Esc/click-outside/arrow keys, duplicate "New Task" removed | `355e7f0` | all five gates green · Playwright 43 passed |
+| 1D Profile | GET/PUT `/api/profile` (validated fields, initials avatar palette), `memory/profile_store.py` SQLite (`AION_PROFILE_DB_PATH`, default git-ignored `apps/api/.data/profile.db`, conftest forces temp path), settings now persist in the same store, first-run "Set up profile" / neutral "Hello", single `useProfile` context (header + greeting + page), real stats tiles, hardcoded "Abdullah"/"AION Workspace" removed, notification toggles live only in Settings | `11b81a3`, `c1510b9` | all five gates green · Playwright 46 passed |
+| 1E Search | GET `/api/search` (min 2 chars, max 100, tenant-aware, 8 grouped collectors, prefix/word/substring ranking, approval/schedule parameters never exposed), grouped header dropdown with icons + `<mark>` highlights, ⌘K/"/" focus, 200 ms debounce + AbortController, recent searches (clearable), static pages + quick actions, All/This-page scope with `usePageSearch` filtering 8 live views, deep-links (`?open/?record/?c/?approval/?new=1`) handled by every page, mobile full-width overlay | `039e819`, `aed8421`, `eb0cd72`, `9a6d4e4` | api 547 passed · desktop 61/2 · tsc 0 · lint clean · Playwright 53 passed |
+| 1F Secret guard | `security/redaction.py` (password:/passwd/pwd=/"my password is", Bearer, AIza…/sk-…, PEM blocks, long hex/base64, Luhn cards) applied at the chat request boundary BEFORE store/model/approval/alert paths; additive `ChatResponse.warnings`; chat UI banner + redacted optimistic bubble (client mirror in `utils/redaction.ts`); 39-case table incl. required false positives | `e1f0054`, `f29b42d`, `47f38e1` | api 594 passed · desktop 61/2 · tsc 0 · lint clean · Playwright 55 passed (54 + 1 legitimately skipped: setup-state test once a profile exists) |
+
+Live E2E at final HEAD (curl + Playwright against running API:8000 + web:3000):
+profile set via PUT → greeting/header read the same row; real chat → bell
+count 17→18 → mark-read → 17; `/api/search` deep-links real rows; theme
+persists across reload (header.spec); raw credential scan over all 17 live
+conversations: 0 messages contain the raw secret, 10 contain the redacted
+marker.
+
 ## Final gate state (as of HEAD `766c870`)
 
 ```

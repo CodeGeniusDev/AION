@@ -132,3 +132,20 @@ bash scripts/preflight.sh
   planned, not built.
 - Docker/compose updates: see docs/DEPLOYMENT.md (bridge stays a HOST
   process — never containerized with host access).
+
+## 9. UI Overhaul Phase 1 — shared apps/api files (for Mahnoor)
+
+All changes are ADDITIVE/backward compatible; the approval gate, threat
+model and Gemini tool declarations (calculator, text_analysis,
+current_datetime) were not touched and their tests stay green.
+
+| File | Change | Why |
+|---|---|---|
+| `models/settings.py`, `routes/settings.py` | theme Literal extended with `"dark"`; legacy `"dim"` normalized to `"dark"` on read and write | single light/dark/system vocabulary across header, Settings and Profile |
+| `memory/alert_store.py`, `models/notifications.py`, `routes/alerts.py` | additive `created_at` (ISO) and `link` fields on alerts (+ task-alert deep links) | bell popover needs relative time and real deep-links (`/tasks?open=ID`, `/desktop?approval=ID`) |
+| `memory/profile_store.py` (NEW), `models/profile.py` (NEW), `routes/profile.py` (NEW) | SQLite profile + persisted settings store (`AION_PROFILE_DB_PATH`, default git-ignored `apps/api/.data/profile.db`), GET/PUT `/api/profile` | header/greeting/Profile read ONE real profile; settings survive restart; conftest forces a temp path so tests never touch the real file |
+| `routes/search.py` (NEW), `models/search.py` (NEW), `main.py` | additive GET `/api/search?q=&limit=` — 8 grouped collectors over existing stores, ranking, tenant isolation; approval/schedule parameters NEVER returned | global search without new DBs or demo data |
+| `security/redaction.py` (NEW), `routes/chat.py`, `models/chat.py` | credentials stripped at the chat request boundary BEFORE store/model/approval/alert paths; additive `ChatResponse.warnings: list[str]` | Secret Guard: raw values never reach conversation store, memory, logs, approval params or Gemini |
+| `config.py`, `.env.example` | +`profile_db_path` setting, env documented | follows the existing AION_*_DB_PATH pattern |
+| `services/dashboard_service.py`, `services/task_service.py`, `routes/events.py`, `cognitive_bus/bus.py`, `services/approval_service.py`, `services/startup_guard.py`, `models/dashboard.py`, `models/notifications.py` | 1A–1C support: real dashboard intelligence fields, event stream wiring, startup warning tweaks consumed by the new header/shell | additive fields only — response shapes of existing endpoints unchanged |
+| `tests/conftest.py` + 8 new test modules | temp profile-DB env, agent-registry isolation snapshot, ~140 new tests (search, profile, alerts, redaction tables, shell endpoints) | test data lives only in temp/in-memory DBs |
