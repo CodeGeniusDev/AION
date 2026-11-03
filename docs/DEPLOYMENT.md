@@ -2,17 +2,17 @@
 
 ## 1. Prerequisites
 
-| Tool                   | Purpose                | Required                                  |
-| ---------------------- | ---------------------- | ----------------------------------------- |
-| Python 3.11+           | Backend + local agent  | ✅                                        |
-| Node.js 18+ + npm      | Frontend               | ✅ (optional for MVP-1)                   |
-| Playwright             | Browser control        | ✅ (MVP-2)                                |
-| PyAutoGUI              | Desktop control        | optional (screenshot/open-app paths)      |
-| openai-whisper or Vosk | Voice STT              | optional — browser Web Speech is default  |
-| Edge TTS or pyttsx3    | Voice TTS              | optional — `/api/voice/status` degrades   |
-| aiohttp / httpx        | HTTP for local bridges | ✅                                        |
-| pytest                 | Testing                | ✅ (already present)                      |
-| shellcheck             | linting scripts/       | optional (`pip install shellcheck-py`)    |
+| Tool                   | Purpose                | Required                                 |
+| ---------------------- | ---------------------- | ---------------------------------------- |
+| Python 3.11+           | Backend + local agent  | ✅                                       |
+| Node.js 18+ + npm      | Frontend               | ✅ (optional for MVP-1)                  |
+| Playwright             | Browser control        | ✅ (MVP-2)                               |
+| PyAutoGUI              | Desktop control        | optional (screenshot/open-app paths)     |
+| openai-whisper or Vosk | Voice STT              | optional — browser Web Speech is default |
+| Edge TTS or pyttsx3    | Voice TTS              | optional — `/api/voice/status` degrades  |
+| aiohttp / httpx        | HTTP for local bridges | ✅                                       |
+| pytest                 | Testing                | ✅ (already present)                     |
+| shellcheck             | linting scripts/       | optional (`pip install shellcheck-py`)   |
 
 ## 2. Step-by-step setup
 
@@ -102,16 +102,16 @@ STT_MODEL_SIZE=small
 
 ### Backend approval environment (`apps/api/.env`)
 
-| Variable                       | Default                                                                                                  | Purpose                                                                                                                        |
-| ------------------------------ | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `AION_APPROVAL_DB_PATH`        | `` (in-memory)                                                                                           | SQLite path for the approval ledger + audit log. Set a real file (e.g. `/data/aion_approvals.db`) for durability.              |
-| `AION_APPROVAL_TTL_SECONDS`    | `300`                                                                                                    | How long a pending approval stays approvable before it expires (expired requests never run).                                   |
-| `AION_AGENT_BRIDGE_URL`        | `http://127.0.0.1:8080`                                                                                  | Local agent bridge base URL.                                                                                                   |
-| `AION_AGENT_SECRET`            | ``                                                                                                       | Shared secret for backend→bridge calls. Must match the bridge's own env. Server-side only; **never** exposed to the frontend.  |
-| `AION_BRIDGE_TIMEOUT_SECONDS`  | `30`                                                                                                     | Per-request timeout for bridge calls.                                                                                          |
+| Variable                       | Default                                                                                                              | Purpose                                                                                                                        |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `AION_APPROVAL_DB_PATH`        | `` (in-memory)                                                                                                       | SQLite path for the approval ledger + audit log. Set a real file (e.g. `/data/aion_approvals.db`) for durability.              |
+| `AION_APPROVAL_TTL_SECONDS`    | `300`                                                                                                                | How long a pending approval stays approvable before it expires (expired requests never run).                                   |
+| `AION_AGENT_BRIDGE_URL`        | `http://127.0.0.1:8080`                                                                                              | Local agent bridge base URL.                                                                                                   |
+| `AION_AGENT_SECRET`            | ``                                                                                                                   | Shared secret for backend→bridge calls. Must match the bridge's own env. Server-side only; **never** exposed to the frontend.  |
+| `AION_BRIDGE_TIMEOUT_SECONDS`  | `30`                                                                                                                 | Per-request timeout for bridge calls.                                                                                          |
 | `AION_PROTECTED_DESKTOP_TOOLS` | `desktop_open_app,desktop_screenshot,browser_navigate,browser_screenshot,file_read,file_write,file_copy,social_post` | Comma-separated tools that always require explicit human approval. `desktop_list_apps` is exempt (read-only).                  |
-| `AION_MEMORY_DB_PATH`          | `` (in-memory)                                                                                           | SQLite path for cognitive memory; compose defaults it (and the approval DB) to `/data/*.db` on the `aion_data` volume.          |
-| `AION_APPROVAL_DISPATCH_ASYNC` | `1`                                                                                                      | `1`: dispatch approved actions in a background task (approve returns `202` immediately). `0`: dispatch inline (used by tests). |
+| `AION_MEMORY_DB_PATH`          | `` (in-memory)                                                                                                       | SQLite path for cognitive memory; compose defaults it (and the approval DB) to `/data/*.db` on the `aion_data` volume.         |
+| `AION_APPROVAL_DISPATCH_ASYNC` | `1`                                                                                                                  | `1`: dispatch approved actions in a background task (approve returns `202` immediately). `0`: dispatch inline (used by tests). |
 
 ## 4. Docker Compose (api + web only)
 

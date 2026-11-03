@@ -131,20 +131,20 @@ What this does and does not defend against is enumerated in
 
 ## API routes
 
-| Method | Route                                    | Data source                                                                                                                                                    |
-| ------ | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET`  | `/` , `/health`                          | Static                                                                                                                                                         |
-| `POST` | `/api/chat`                              | **Real** — full pipeline: Dynamic Brain Formation → Agents → Cognitive Bus → Immune verification → Cognitive Memory write-back                                 |
-| `GET`  | `/api/agents`                            | **Real** — live Cognitive DNA Agent Registry                                                                                                                   |
-| `GET`  | `/api/tasks`, `/api/tasks/{id}`          | **Real** — derived from episodic Cognitive Memory records (no dedicated Task entity exists; this is the closest real data)                                     |
-| `GET`  | `/api/memory`                            | **Real** — live counts from the SQLite-backed Cognitive Memory store                                                                                           |
-| `GET`  | `/api/research`                          | **Real** — Immune-verified semantic memory records tagged as research findings                                                                                 |
-| `GET`  | `/api/dashboard`                         | **Real** — aggregated from the Agent Registry and Cognitive Memory store                                                                                       |
-| `GET`  | `/api/workflows`                         | **Real** — SQLite-backed Workflow entity store (list/detail/create/run); `runs` is a real counter, `state` derives from real executions |
-| `POST` | `/api/desktop/execute`                   | **Real** — requests a protected desktop action; creates a task + pending approval and never executes (`202`)                                                   |
-| `GET`  | `/api/approvals`, `/api/approvals/{id}`  | **Real** — tenant-scoped approval ledger (sanitized parameters)                                                                                                |
-| `POST` | `/api/approvals/{id}/approve`, `/reject` | **Real** — human decision: approve wins the atomic claim, registers a bridge grant, and dispatches once (`202`/`409`/`410`); reject is terminal (`200`)        |
-| `GET`  | `/api/audit`                             | **Real** — read-only, append-only execution audit trail (secret-free)                                                                                          |
+| Method | Route                                    | Data source                                                                                                                                             |
+| ------ | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET`  | `/` , `/health`                          | Static                                                                                                                                                  |
+| `POST` | `/api/chat`                              | **Real** — full pipeline: Dynamic Brain Formation → Agents → Cognitive Bus → Immune verification → Cognitive Memory write-back                          |
+| `GET`  | `/api/agents`                            | **Real** — live Cognitive DNA Agent Registry                                                                                                            |
+| `GET`  | `/api/tasks`, `/api/tasks/{id}`          | **Real** — derived from episodic Cognitive Memory records (no dedicated Task entity exists; this is the closest real data)                              |
+| `GET`  | `/api/memory`                            | **Real** — live counts from the SQLite-backed Cognitive Memory store                                                                                    |
+| `GET`  | `/api/research`                          | **Real** — Immune-verified semantic memory records tagged as research findings                                                                          |
+| `GET`  | `/api/dashboard`                         | **Real** — aggregated from the Agent Registry and Cognitive Memory store                                                                                |
+| `GET`  | `/api/workflows`                         | **Real** — SQLite-backed Workflow entity store (list/detail/create/run); `runs` is a real counter, `state` derives from real executions                 |
+| `POST` | `/api/desktop/execute`                   | **Real** — requests a protected desktop action; creates a task + pending approval and never executes (`202`)                                            |
+| `GET`  | `/api/approvals`, `/api/approvals/{id}`  | **Real** — tenant-scoped approval ledger (sanitized parameters)                                                                                         |
+| `POST` | `/api/approvals/{id}/approve`, `/reject` | **Real** — human decision: approve wins the atomic claim, registers a bridge grant, and dispatches once (`202`/`409`/`410`); reject is terminal (`200`) |
+| `GET`  | `/api/audit`                             | **Real** — read-only, append-only execution audit trail (secret-free)                                                                                   |
 
 ### Chat orchestration
 

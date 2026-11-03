@@ -11,7 +11,7 @@ Reference shapes (current code, not invented):
   `agents ⊆ {Planner, Research, Critic, Memory}` (model-safe whitelist —
   anything else is a 400). `POST /api/workflows/{id}/run` body:
   `{ input: string ≤ 4000 chars }`, returning `{ task_id, status, answer,
-  confidence, processing_time_ms }`.
+confidence, processing_time_ms }`.
 - Desktop side effects (`file_write`, `file_copy`, `browser_navigate`,
   `social_post`, …) are NOT part of a workflow's agent list — workflows
   only synthesize text. Anything that touches the store's files or platforms
@@ -46,10 +46,10 @@ Expected output: title (< 70 chars), 2-paragraph description, 5 bullet
 specs, meta description (< 160 chars), 3 internal-link suggestions — as
 plain text the operator then pastes into Shopify admin by hand.
 
-| Aspect | Answer |
-|---|---|
-| Data needed | Product spec sheet (pasted in `input`, or CSV exported from Shopify admin → `file_read` approval to ingest); brand tone guide (stored in AION Memory via the memory API, or pasted) |
-| Human-approved | Writing the draft to disk (`file_write`, e.g. `~/decoricks/drafts/`); anything that reaches Shopify |
+| Aspect               | Answer                                                                                                                                                                                                  |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Data needed          | Product spec sheet (pasted in `input`, or CSV exported from Shopify admin → `file_read` approval to ingest); brand tone guide (stored in AION Memory via the memory API, or pasted)                     |
+| Human-approved       | Writing the draft to disk (`file_write`, e.g. `~/decoricks/drafts/`); anything that reaches Shopify                                                                                                     |
 | Credentials required | **None** for the draft itself. Publishing to Shopify = **Shopify Admin API** (custom-app token, `products` scope) — does not exist in AION today; would be a new provider behind the same approval gate |
 
 ## Workflow 2 — Meta Ad Copy Variant Studio
@@ -76,10 +76,10 @@ Example `run.input`:
 Expected output: a labeled matrix of variants with char counts, plus the
 critic's compliance notes (what was trimmed and why).
 
-| Aspect | Answer |
-|---|---|
-| Data needed | Campaign brief (pasted), current catalogue/prices (CSV export or `file_read` of the operator's price list), past ad performance screenshots/CSV (optional, better) |
-| Human-approved | `social_post` is already a protected tool (approval-gated, dry-run by default). Even after credentials, every live post needs a human click; variants are just text until then |
+| Aspect               | Answer                                                                                                                                                                                                                                                                                                              |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Data needed          | Campaign brief (pasted), current catalogue/prices (CSV export or `file_read` of the operator's price list), past ad performance screenshots/CSV (optional, better)                                                                                                                                                  |
+| Human-approved       | `social_post` is already a protected tool (approval-gated, dry-run by default). Even after credentials, every live post needs a human click; variants are just text until then                                                                                                                                      |
 | Credentials required | **Meta Ads API** (system-user token, `ads_management`) for actual campaign object creation — NOT the same as the Page-level `social_post` scaffold in `desktop/aion_desktop/social/`, which posts to a Page feed only. Ad creation is a genuinely new provider; app review + Business Manager assets are owner work |
 
 ## Workflow 3 — Weekly SEO & Content Checklist
@@ -112,11 +112,11 @@ Scheduling WITHOUT back-fill is exactly the current Phase 5 semantics: a
 weekly interval schedule fires only while the API process runs, and at fire
 time it can only **create a pending approval** — never execute.
 
-| Aspect | Answer |
-|---|---|
-| Data needed | Category list + last-week status (pasted into `input`, or read via approved `file_read` of a checklist file the previous week created); public pages via approved `browser_navigate`/screenshot if a live audit is wanted |
-| Human-approved | `file_write` of the weekly checklist file; every `browser_navigate` of a live audit; the schedule itself is CRUD-gated when auth is on |
-| Credentials required | **None.** This workflow runs fully inside what AION already does (model-safe agents + approval-gated desktop tools + opt-in scheduler) |
+| Aspect               | Answer                                                                                                                                                                                                                    |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Data needed          | Category list + last-week status (pasted into `input`, or read via approved `file_read` of a checklist file the previous week created); public pages via approved `browser_navigate`/screenshot if a live audit is wanted |
+| Human-approved       | `file_write` of the weekly checklist file; every `browser_navigate` of a live audit; the schedule itself is CRUD-gated when auth is on                                                                                    |
+| Credentials required | **None.** This workflow runs fully inside what AION already does (model-safe agents + approval-gated desktop tools + opt-in scheduler)                                                                                    |
 
 ---
 
