@@ -1,0 +1,24 @@
+# Build artifacts and dependencies
+node_modules/
+.next/
+out/
+build/
+dist/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+tsconfig.tsbuildinfo
+
+# Local data / generated scratch
+apps/api/.data/
+desktop/desktop_workspace/
+desktop/logs/
+output/
+.playwright-out/
+playwright-report/
+test-results/
+
+# Lockfiles and machine-generated
+package-lock.json
+docker-compose.yml

@@ -61,4 +61,16 @@ def consolidate_task_memory(
             )
             written.append(store.write(semantic))
 
+    # Phase 2B: notify SSE subscribers of memory write.
+    if written:
+        try:
+            from realtime.publishers import publish_memory_written
+            from config import settings as _settings
+            publish_memory_written(
+                tenant_id or _settings.default_tenant_id,
+                task_id=task_id, record_count=len(written),
+            )
+        except Exception:
+            pass
+
     return written

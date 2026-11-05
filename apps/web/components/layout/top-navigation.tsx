@@ -1,84 +1,63 @@
 "use client";
 
-import { useState } from "react";
-import { Bell, Menu, Moon, Search, Settings, Sun } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Menu, Monitor, Moon, Settings, Sun } from "lucide-react";
+import { GlobalSearch } from "@/components/layout/global-search";
+import { NotificationsPopover } from "@/components/layout/notifications-popover";
+import { ProfileMenu } from "@/components/layout/profile-menu";
+import { Tooltip } from "@/components/ui/tooltip";
+import { useTheme } from "@/components/layout/theme-provider";
 import { cn } from "@/utils/cn";
 
 interface TopNavigationProps {
   onMenuOpen: () => void;
 }
 
+const THEME_LABEL = { light: "Light", dark: "Dark", system: "System" } as const;
+
 export function TopNavigation({ onMenuOpen }: TopNavigationProps) {
-  const [dimmed, setDimmed] = useState(false);
-  function toggleTheme() {
-    setDimmed((value) => {
-      const nextValue = !value;
-      document.documentElement.dataset.theme = nextValue ? "dim" : "light";
-      return nextValue;
-    });
-  }
+  const { theme, resolvedTheme, toggleTheme } = useTheme();
+  const pathname = usePathname();
+  const ThemeIcon =
+    theme === "system" ? Monitor : resolvedTheme === "dark" ? Moon : Sun;
+
   return (
-    <header className="flex h-[76px] shrink-0 items-center gap-3 px-3 sm:px-4 lg:px-5">
+    <header className="flex h-[76px] shrink-0 items-center gap-2 px-3 sm:gap-3 sm:px-4 lg:px-5">
       <button
         type="button"
         onClick={onMenuOpen}
-        className="grid size-11 shrink-0 place-items-center rounded-full border bg-white text-navy lg:hidden"
-        aria-label="Open navigation"
-      >
+        className="grid size-10 shrink-0 place-items-center rounded-full border bg-surface text-navy hover:bg-muted sm:size-11 lg:hidden"
+        aria-label="Open navigation">
         <Menu className="size-5" />
       </button>
-      <label className="relative min-w-0 flex-1 sm:max-w-[620px]">
-        <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-[#8b919a]" />
-        <span className="sr-only">Search AION</span>
-        <input
-          type="search"
-          placeholder="Search tasks, agents or memory"
-          className="h-11 w-full rounded-full border bg-white pl-11 pr-4 text-sm shadow-[0_2px_10px_rgba(25,36,56,0.035)] placeholder:text-[#9a9fa7]"
-        />
-      </label>
-      <div className="ml-auto flex shrink-0 items-center gap-2">
-        <button
-          type="button"
-          onClick={toggleTheme}
-          aria-pressed={dimmed}
-          className="hidden size-11 place-items-center rounded-full border bg-white text-navy shadow-[0_2px_10px_rgba(25,36,56,0.035)] hover:bg-[#f8fafc] sm:grid"
-          aria-label="Toggle theme"
-        >
-          {dimmed ? (
-            <Sun className="size-[18px]" />
-          ) : (
-            <Moon className="size-[18px]" />
-          )}
-        </button>
-        <a
-          href="alert"
-          type="button"
-          className="relative hidden size-11 place-items-center rounded-full border bg-white text-navy shadow-[0_2px_10px_rgba(25,36,56,0.035)] hover:bg-[#f8fafc] xs:grid sm:grid"
-          aria-label="Notifications"
-        >
-          <Bell className="size-[18px]" />
-          <span className="absolute right-2.5 top-2.5 size-1.5 rounded-full bg-primary" />
-        </a>
-        <a
-          href="/settings"
-          className="hidden size-11 place-items-center rounded-full border bg-white text-navy shadow-[0_2px_10px_rgba(25,36,56,0.035)] hover:bg-[#f8fafc] md:grid"
-          aria-label="Settings"
-        >
-          <Settings className="size-[18px]" />
-        </a>
-        <button
-          type="button"
-          className={cn(
-            "flex h-11 items-center gap-2 rounded-full border bg-white p-1.5 pr-2.5 shadow-[0_2px_10px_rgba(25,36,56,0.035)]",
-            dimmed && "bg-[#f7f8fb]",
-          )}
-          aria-label="Open user menu"
-        >
-          <span className="grid size-8 place-items-center rounded-full bg-navy text-xs font-semibold text-white">
-            AA
-          </span>
-          <span className="hidden text-xs font-medium xl:block">Abdullah</span>
-        </button>
+      <GlobalSearch className="min-w-0 flex-1 sm:max-w-[620px]" />
+      <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+        <Tooltip content={`Theme: ${THEME_LABEL[theme]} — click to toggle`}>
+          <button
+            type="button"
+            onClick={toggleTheme}
+            aria-pressed={resolvedTheme === "dark"}
+            aria-label="Toggle theme"
+            className="grid size-10 place-items-center rounded-full border bg-surface text-navy shadow-[0_2px_10px_rgba(25,36,56,0.035)] hover:bg-muted sm:size-11">
+            <ThemeIcon className="size-4 sm:size-[18px]" />
+          </button>
+        </Tooltip>
+        <NotificationsPopover />
+        <Tooltip content="Settings">
+          <Link
+            href="/settings"
+            aria-label="Settings"
+            aria-current={pathname === "/settings" ? "page" : undefined}
+            className={cn(
+              "hidden size-11 place-items-center rounded-full border bg-surface text-navy shadow-[0_2px_10px_rgba(25,36,56,0.035)] hover:bg-muted md:grid",
+              pathname === "/settings" &&
+                "border-primary bg-soft-blue text-foreground",
+            )}>
+            <Settings className="size-[18px]" />
+          </Link>
+        </Tooltip>
+        <ProfileMenu />
       </div>
     </header>
   );

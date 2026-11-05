@@ -1,14 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { MessageSquarePlus } from "lucide-react";
 import { getDashboard, getHealth } from "@/services/api";
 import type { DashboardData, HealthData, TaskStatus } from "@/types";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { PageHeader } from "@/components/layout/page-header";
+import { firstNameOf, useProfile } from "@/components/profile/profile-provider";
 import { SummaryCard } from "./summary-card";
 import { AionStatusBanner } from "./aion-status-banner";
 import { SystemHealthCard } from "./system-health-card";
@@ -19,7 +18,7 @@ import { cn } from "@/utils/cn";
 type Filter = "all" | TaskStatus;
 
 export function DashboardView() {
-  const router = useRouter();
+  const { configured, profile } = useProfile();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -52,7 +51,7 @@ export function DashboardView() {
   const visibleTasks = useMemo(
     () =>
       filter === "all"
-        ? data?.recent_tasks ?? []
+        ? (data?.recent_tasks ?? [])
         : (data?.recent_tasks ?? []).filter((task) => task.status === filter),
     [data, filter],
   );
@@ -61,21 +60,16 @@ export function DashboardView() {
     <>
       <PageHeader
         eyebrow="Command center"
-        title="Hello, Abdullah"
-        description="Manage your Artificial Intelligence Operating Nervous System."
-        action={
-          <Button onClick={() => router.push("/chat")}>
-            <MessageSquarePlus className="mr-2 size-4" />
-            New Task
-          </Button>
+        title={
+          configured && profile ? `Hello, ${firstNameOf(profile)}` : "Hello"
         }
+        description="Manage your Artificial Intelligence Operating Nervous System."
       />
       <div className="p-4 sm:p-6 lg:p-7">
         {loading ? (
           <div
             aria-label="Loading dashboard"
-            className="grid gap-5 lg:grid-cols-[minmax(0,1.9fr)_minmax(280px,1fr)]"
-          >
+            className="grid gap-5 lg:grid-cols-[minmax(0,1.9fr)_minmax(280px,1fr)]">
             <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {[0, 1, 2].map((item) => (
                 <LoadingSkeleton key={item} className="h-[190px]" />
@@ -89,7 +83,10 @@ export function DashboardView() {
             title="Unable to load data"
             description="AION could not reach the backend API. Check that the server is running, then retry."
             action={
-              <Button variant="outline" size="sm" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setLoadAttempt((attempt) => attempt + 1)}>
                 Retry
               </Button>
             }
@@ -119,8 +116,7 @@ export function DashboardView() {
               </div>
               <section
                 id="recent-tasks"
-                className="min-w-0 rounded-[24px] border bg-white p-5 sm:p-6"
-              >
+                className="min-w-0 rounded-[24px] border bg-surface p-5 sm:p-6">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <h2 className="text-lg font-semibold tracking-[-0.02em]">
@@ -130,7 +126,7 @@ export function DashboardView() {
                       View recent AI tasks and results
                     </p>
                   </div>
-                  <div className="flex flex-wrap gap-1 rounded-full bg-[#f2f4f7] p-1">
+                  <div className="flex flex-wrap gap-1 rounded-full bg-surface-2 p-1">
                     {(
                       ["all", "completed", "running", "failed"] as Filter[]
                     ).map((item) => (
@@ -141,10 +137,9 @@ export function DashboardView() {
                         className={cn(
                           "rounded-full px-3 py-1.5 text-[10px] font-medium capitalize",
                           filter === item
-                            ? "bg-white text-aion-text shadow-sm"
+                            ? "bg-surface text-aion-text shadow-sm"
                             : "text-muted-text hover:text-aion-text",
-                        )}
-                      >
+                        )}>
                         {item}
                       </button>
                     ))}
@@ -167,7 +162,7 @@ export function DashboardView() {
             <div className="min-w-0 space-y-5">
               <SystemHealthCard value={data.system_health} health={health} />
               <AionStatusBanner connectedAgents={data.active_agents} />
-              <section className="rounded-[24px] border bg-white p-5">
+              <section className="rounded-[24px] border bg-surface p-5">
                 <h2 className="text-lg font-semibold tracking-[-0.02em]">
                   Agent Activity
                 </h2>

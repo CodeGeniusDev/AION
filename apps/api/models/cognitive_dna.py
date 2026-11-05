@@ -47,6 +47,10 @@ class Domain(str, Enum):
     MEMORY = "memory"
     GENERAL = "general"
     COMPUTATION = "computation"  # added for the Tool System: deterministic utility tools (e.g. calculation, text analysis) that don't fit the four agent domains
+    DESKTOP = "desktop"       # local OS control: apps, screenshots, desktop automation
+    WEB = "web"               # browser navigation, input, screenshots
+    FILE = "file"             # local file read/write/copy
+    SOCIAL = "social"         # social media post (OAuth2, no passwords)
 
 
 class AvailabilityStatus(str, Enum):

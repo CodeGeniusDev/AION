@@ -39,6 +39,47 @@ class Settings:
     # (e.g. "/data/aion_memory.db") for durability across process restarts.
     # Docker Compose mounts a volume at /data by default.
     memory_db_path: str = os.getenv("AION_MEMORY_DB_PATH", "")
+    # SQLite file path for the Workflow entity store (Phase 1). Empty keeps
+    # workflows in in-memory SQLite (seeded fresh, lost on restart); set a
+    # real path for durable, user-created workflows across restarts.
+    workflow_db_path: str = os.getenv("AION_WORKFLOW_DB_PATH", "")
+    # SQLite file path for the Profile + persisted workspace settings
+    # (Phase 1D). Unset falls back to the git-ignored apps/api/.data/
+    # profile.db local file; tests force a temp path via conftest.
+    profile_db_path: str = os.getenv("AION_PROFILE_DB_PATH", "")
+    # SQLite file path for the Schedule store (Phase 5). Empty keeps
+    # schedules in in-memory SQLite (lost on restart); set a real path
+    # for schedules that survive deployments. The schedule runner is
+    # opt-in: 1 starts the background tick thread (fires create PENDING
+    # approvals, never execute).
+    schedule_db_path: str = os.getenv("AION_SCHEDULE_DB_PATH", "")
+    scheduler_enabled: bool = os.getenv("AION_SCHEDULER_ENABLED", "0") == "1"
+    # --- Human-in-the-loop desktop tool approvals ---------------------
+    # Approval ledger + audit log SQLite path. Empty keeps the ledger
+    # in-memory (hermetic tests); deployments set a real file path.
+    approval_db_path: str = os.getenv("AION_APPROVAL_DB_PATH", "")
+    # How long a pending approval request stays approvable before it
+    # expires (5 minutes by default — an expired request can never run).
+    approval_ttl_seconds: int = int(os.getenv("AION_APPROVAL_TTL_SECONDS", "300"))
+    # The desktop agent bridge. Shared secret for server-to-server calls
+    # ONLY — env-derived, never returned to or accepted from the frontend.
+    agent_bridge_url: str = os.getenv("AION_AGENT_BRIDGE_URL", "http://127.0.0.1:8080")
+    agent_secret: str = os.getenv("AION_AGENT_SECRET", "")
+    bridge_timeout_seconds: float = float(os.getenv("AION_BRIDGE_TIMEOUT_SECONDS", "30"))
+    # Tools that always require an explicit human approval before the
+    # bridge executes them. desktop_list_apps is exempt by default
+    # (read-only process list); voice tools follow the same env-driven
+    # policy. Comma-separated list.
+    protected_desktop_tools: str = os.getenv(
+        "AION_PROTECTED_DESKTOP_TOOLS",
+        "desktop_open_app,desktop_screenshot,browser_navigate,"
+        "browser_screenshot,file_read,file_write,file_copy,social_post",
+    )
+    # True (default): an approved action is dispatched to the bridge in a
+    # BackgroundTask, so the approve request returns 202 immediately while
+    # the desktop tool runs. False dispatches inline before the response —
+    # used by tests that assert the terminal state in the same tick.
+    approval_dispatch_async: bool = os.getenv("AION_APPROVAL_DISPATCH_ASYNC", "1") == "1"
 
 
 settings = Settings()

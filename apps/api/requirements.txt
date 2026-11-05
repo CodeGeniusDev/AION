@@ -5,3 +5,8 @@ python-dotenv>=1.0,<2.0
 pytest>=8.3,<9.0
 httpx>=0.28,<1.0
 
+
+# Optional voice backend (server-side TTS for browser playback).
+# Without it /api/voice/status reports available=false and the UI
+# degrades gracefully — see docs/AION_MVP_PLAN.md (Phase: voice).
+# edge-tts>=7.0,<8.0

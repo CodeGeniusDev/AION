@@ -2,9 +2,9 @@ import { CheckCircle2, Database, RadioTower } from "lucide-react";
 import type { HealthData } from "@/types";
 
 const statusColors: Record<string, string> = {
-  ok: "bg-[#eaf6f0] text-[#247a55]",
-  degraded: "bg-[#fff4d8] text-[#84651b]",
-  error: "bg-[#fde8e8] text-[#b14a4a]",
+  ok: "bg-success-soft text-success-text",
+  degraded: "bg-warning-soft text-warning-text",
+  error: "bg-danger-soft text-danger-text",
 };
 
 const statusLabels: Record<string, string> = {
@@ -44,7 +44,7 @@ export function SystemHealthCard({
   const overall = health?.status ?? "healthy";
 
   return (
-    <article className="rounded-[24px] border bg-white p-5 sm:p-6">
+    <article className="rounded-[24px] border bg-surface p-5 sm:p-6">
       <div className="flex items-start justify-between">
         <div>
           <h2 className="text-lg font-semibold tracking-[-0.02em]">
@@ -61,7 +61,7 @@ export function SystemHealthCard({
       </div>
       <div className="relative mx-auto mt-8 h-[100px] w-[210px] overflow-hidden">
         <div className="health-gauge absolute inset-x-0 top-0 h-[210px] rounded-full" />
-        <div className="absolute left-[18px] top-[18px] size-[174px] rounded-full bg-white" />
+        <div className="absolute left-[18px] top-[18px] size-[174px] rounded-full bg-surface" />
         <div className="absolute inset-x-0 bottom-0 text-center">
           <span className="text-[43px] font-semibold leading-none tracking-[-0.05em]">
             {value}%

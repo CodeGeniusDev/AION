@@ -1,13 +1,25 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import {
+  FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { useSearchParams } from "next/navigation";
 import {
   MessageCircleMore,
+  Mic,
+  MicOff,
   Plus,
   Send,
+  ShieldAlert,
   Sparkles,
   Trash2,
   UserRound,
+  X,
 } from "lucide-react";
 import {
   deleteConversation,
@@ -24,13 +36,24 @@ import type {
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
+import { usePageSearch } from "@/components/layout/page-search-provider";
+import { firstNameOf, useProfile } from "@/components/profile/profile-provider";
 import { AionMessage } from "./aion-message";
 import { ChatErrorState } from "./chat-error-state";
 import { ModeSelector } from "./mode-selector";
 import { ProcessingState } from "./processing-state";
 import { cn } from "@/utils/cn";
+import { redactSecrets } from "@/utils/redaction";
+import {
+  speechRecognitionSupported,
+  startDictation,
+  type Dictation,
+} from "@/utils/speech";
 
 export function ChatView() {
+  const { configured, profile } = useProfile();
+  const searchParams = useSearchParams();
+  const { matches } = usePageSearch();
   const [activeChat, setActiveChat] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -44,6 +67,44 @@ export function ChatView() {
   );
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [sseTaskId, setSseTaskId] = useState<string | null>(null);
+  // Phase 1F: Secret Guard. Kinds of credentials the backend stripped
+  // from the last exchange; shown once, dismissible, never invented.
+  const [securityWarnings, setSecurityWarnings] = useState<string[]>([]);
+
+  // ── Voice dictation (Web Speech API, browser-side only) ──
+  // Transcripts land in the composer and are sent through the ordinary
+  // chat path — every chat rule (approval gate included) applies as-is.
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const dictationRef = useRef<Dictation | null>(null);
+
+  useEffect(() => {
+    // Feature-detect after mount to avoid SSR hydration mismatch.
+    setSpeechSupported(speechRecognitionSupported());
+    return () => dictationRef.current?.stop();
+  }, []);
+
+  const toggleDictation = () => {
+    if (listening) {
+      dictationRef.current?.stop();
+      dictationRef.current = null;
+      setListening(false);
+      return;
+    }
+    setVoiceError(null);
+    const session = startDictation(
+      (text) => setInput((current) => (current ? `${current} ${text}` : text)),
+      (message) => setVoiceError(message),
+      () => setListening(false),
+    );
+    if (session) {
+      dictationRef.current = session;
+      setListening(true);
+    } else {
+      setVoiceError("Speech recognition could not start in this browser.");
+    }
+  };
 
   const manualInvalid = mode === "manual" && selectedAgents.length === 0;
 
@@ -59,7 +120,7 @@ export function ChatView() {
   }, [refreshConversations]);
 
   // Load a conversation's messages
-  async function loadConversation(convoId: string) {
+  const loadConversation = useCallback(async (convoId: string) => {
     try {
       const stored = await getConversationMessages(convoId);
       const loaded: ChatMessage[] = stored.map((msg, idx) =>
@@ -94,10 +155,12 @@ export function ChatView() {
       setConversationId(convoId);
       setMessages(loaded);
       setFailedPrompt(null);
+      setErrorDetail(null);
+      setSecurityWarnings([]);
     } catch {
       // conversation not found
     }
-  }
+  }, []);
 
   async function handleDeleteConversation(convoId: string) {
     try {
@@ -124,6 +187,10 @@ export function ChatView() {
     setActiveChat((current) => current ?? "new-chat");
     setFailedPrompt(null);
     setErrorDetail(null);
+    // Phase 1F: show the redacted form immediately — the server strips
+    // the same credentials before persisting, so the bubble must match
+    // what is actually stored, not the raw input.
+    const displayValue = redactSecrets(value).text;
     setMessages((current) => {
       const retained = replaceId
         ? current.filter((message) => message.id !== replaceId)
@@ -132,7 +199,7 @@ export function ChatView() {
         ? retained
         : [
             ...retained,
-            { id: `user-${Date.now()}`, role: "user", content: value },
+            { id: `user-${Date.now()}`, role: "user", content: displayValue },
           ];
     });
     setInput("");
@@ -153,6 +220,7 @@ export function ChatView() {
       }
       setConversationId(response.conversation_id);
       setSseTaskId(response.task_id);
+      setSecurityWarnings(response.warnings ?? []);
       setMessages((current) => [
         ...current,
         { id: `aion-${Date.now()}`, role: "assistant", response },
@@ -165,7 +233,7 @@ export function ChatView() {
         setErrorDetail(
           err instanceof Error && err.message !== "workflow_failed"
             ? `Network error: ${err.message}`
-            : "Could not reach the AION backend. Please check that the server is running."
+            : "Could not reach the AION backend. Please check that the server is running.",
         );
       }
       setFailedPrompt(value);
@@ -185,7 +253,27 @@ export function ChatView() {
     setErrorDetail(null);
     setConversationId(undefined);
     setSseTaskId(null);
+    setSecurityWarnings([]);
   }
+  const startFreshRef = useRef(startFresh);
+  startFreshRef.current = startFresh;
+
+  // Deep links from global search: /chat?c=ID opens that real conversation;
+  // the "New conversation" quick action uses /chat?c=new.
+  const handledLinkRef = useRef<string | null>(null);
+  useEffect(() => {
+    const c = searchParams.get("c");
+    if (!c || handledLinkRef.current === c) return;
+    handledLinkRef.current = c;
+    if (c === "new") startFreshRef.current();
+    else void loadConversation(c);
+  }, [searchParams, loadConversation]);
+
+  // "This page" scope filters the conversation list by title.
+  const visibleConversations = useMemo(
+    () => conversations.filter((convo) => matches(convo.title)),
+    [conversations, matches],
+  );
   function previousUserMessage(index: number) {
     for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
       const message = messages[cursor];
@@ -224,7 +312,7 @@ export function ChatView() {
         }
       />
       <div className="grid min-h-[680px] min-w-0 lg:grid-cols-[270px_minmax(0,1fr)]">
-        <aside className="border-b bg-[#f8fafc] p-4 lg:border-b-0 lg:border-r">
+        <aside className="border-b bg-muted p-4 lg:border-b-0 lg:border-r">
           <p className="px-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-text">
             Recent conversations
           </p>
@@ -232,9 +320,13 @@ export function ChatView() {
             <p className="mt-3 px-2 text-[10px] leading-5 text-muted-text">
               No conversations yet.
             </p>
+          ) : visibleConversations.length === 0 ? (
+            <p className="mt-3 px-2 text-[10px] leading-5 text-muted-text">
+              No conversations match the search.
+            </p>
           ) : (
             <ul className="mt-3 space-y-1">
-              {conversations.map((convo) => (
+              {visibleConversations.map((convo) => (
                 <li key={convo.conversation_id}>
                   <button
                     type="button"
@@ -243,7 +335,7 @@ export function ChatView() {
                       "flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-[11px] transition-colors",
                       conversationId === convo.conversation_id
                         ? "bg-primary/10 font-medium text-primary"
-                        : "text-muted-text hover:bg-white",
+                        : "text-muted-text hover:bg-muted",
                     )}>
                     <MessageCircleMore className="size-3.5 shrink-0" />
                     <span className="flex-1 truncate">{convo.title}</span>
@@ -256,7 +348,7 @@ export function ChatView() {
                         e.stopPropagation();
                         void handleDeleteConversation(convo.conversation_id);
                       }}
-                      className="shrink-0 rounded p-0.5 text-muted-text hover:text-[#b14a4a]"
+                      className="shrink-0 rounded p-0.5 text-muted-text hover:text-danger-text"
                       aria-label={`Delete ${convo.title}`}>
                       <Trash2 className="size-3" />
                     </button>
@@ -272,7 +364,11 @@ export function ChatView() {
               <Sparkles className="size-4" />
             </span>
             <div className="pt-0.5">
-              <p className="text-xs font-semibold">AION Workspace</p>
+              <p className="text-xs font-semibold">
+                {configured && profile
+                  ? `${firstNameOf(profile)}'s workspace`
+                  : "Local workspace"}
+              </p>
               <p className="text-[10px] text-muted-text">{headerStatus}</p>
             </div>
             <ModeSelector
@@ -286,6 +382,32 @@ export function ChatView() {
               onAgentsChange={setSelectedAgents}
             />
           </div>
+          {/* Phase 1F: Secret Guard banner — rendered only when the API
+              actually reported stripped credentials for this exchange. */}
+          {securityWarnings.length > 0 && (
+            <div
+              role="alert"
+              className="mx-4 mt-3 flex items-start gap-3 rounded-2xl border bg-soft-peach/50 px-4 py-3 text-sm sm:mx-6">
+              <ShieldAlert className="mt-0.5 size-4 shrink-0 text-destructive" />
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-foreground">
+                  Credentials detected and removed (
+                  {securityWarnings.join(", ")}).
+                </p>
+                <p className="mt-0.5 text-xs text-muted-text">
+                  AION never needs your password; use official OAuth. Change
+                  this password if it is real.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSecurityWarnings([])}
+                aria-label="Dismiss security warning"
+                className="grid size-7 shrink-0 place-items-center rounded-full text-muted-text hover:bg-muted hover:text-foreground">
+                <X className="size-4" />
+              </button>
+            </div>
+          )}
           <div className="scrollbar-subtle flex-1 overflow-y-auto p-4 sm:p-6">
             {!activeChat ? (
               <EmptyState
@@ -306,7 +428,7 @@ export function ChatView() {
                       <div className="max-w-[82%] rounded-[22px] rounded-tr-md bg-navy px-4 py-3 text-sm leading-6 text-white">
                         <p>{message.content}</p>
                       </div>
-                      <span className="grid size-9 shrink-0 place-items-center rounded-full bg-[#e9edf2] text-navy">
+                      <span className="grid size-9 shrink-0 place-items-center rounded-full bg-muted text-navy">
                         <UserRound className="size-4" />
                       </span>
                     </div>
@@ -339,7 +461,7 @@ export function ChatView() {
             )}
           </div>
           <form onSubmit={submit} className="border-t p-4 sm:p-5">
-            <div className="mx-auto flex max-w-3xl items-end gap-2 rounded-[26px] border bg-white p-2 pl-4 shadow-[0_6px_22px_rgba(25,36,56,0.06)] focus-within:outline-none focus-within:ring-0">
+            <div className="mx-auto flex max-w-3xl items-end gap-2 rounded-[26px] border bg-surface p-2 pl-4 shadow-[0_6px_22px_rgba(25,36,56,0.06)] focus-within:outline-none focus-within:ring-0">
               <label className="min-w-0 flex-1">
                 <span className="sr-only">Message AION</span>
 
@@ -379,10 +501,32 @@ export function ChatView() {
           focus-visible:border-0
           focus-visible:outline-none
           focus-visible:ring-0
-          placeholder:text-[#9a9fa7]
+          placeholder:text-muted-text
         "
                 />
               </label>
+
+              {speechSupported && (
+                <Button
+                  size="icon"
+                  type="button"
+                  variant="outline"
+                  onClick={toggleDictation}
+                  aria-pressed={listening}
+                  aria-label={
+                    listening ? "Stop dictating" : "Dictate a message"
+                  }
+                  className={cn(
+                    listening &&
+                      "border-danger-border bg-danger-soft text-danger-text animate-pulse",
+                  )}>
+                  {listening ? (
+                    <MicOff className="size-4" />
+                  ) : (
+                    <Mic className="size-4" />
+                  )}
+                </Button>
+              )}
 
               <Button
                 size="icon"
@@ -393,8 +537,15 @@ export function ChatView() {
               </Button>
             </div>
 
+            {voiceError && (
+              <p
+                role="alert"
+                className="mx-auto mt-2 max-w-3xl text-center text-[10px] text-danger-text">
+                {voiceError}
+              </p>
+            )}
             {manualInvalid && (
-              <p className="mx-auto mt-2 max-w-3xl text-center text-[10px] text-[#b14a4a]">
+              <p className="mx-auto mt-2 max-w-3xl text-center text-[10px] text-danger-text">
                 Select at least one agent in Manual Agents mode.
               </p>
             )}

@@ -150,7 +150,7 @@ export function ProcessingState({
       <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-white">
         <Bot className="size-4" />
       </span>
-      <div className="min-w-[260px] rounded-[20px] rounded-tl-md bg-[#f0f4fa] p-4">
+      <div className="min-w-[260px] rounded-[20px] rounded-tl-md bg-surface-2 p-4">
         <p className="text-xs font-semibold">AION is working...</p>
         <p className="mt-1 text-[9px] uppercase tracking-[0.12em] text-muted-text">
           {connected ? "Live agent progress" : "Connecting..."}
@@ -158,7 +158,7 @@ export function ProcessingState({
         <div className="mt-3 space-y-2 text-[11px]">
           {/* Selecting agents step — always completed */}
           <div className="flex items-center gap-2">
-            <Check className="size-3.5 text-[#2b9b68]" />
+            <Check className="size-3.5 text-success-text" />
             <span>Selecting agents</span>
           </div>
 
@@ -167,10 +167,10 @@ export function ProcessingState({
             ? steps.map((step) => (
                 <div key={step.agent} className="flex items-center gap-2">
                   {step.status === "completed" ? (
-                    <Check className="size-3.5 text-[#2b9b68]" />
+                    <Check className="size-3.5 text-success-text" />
                   ) : (
                     <Circle
-                      className={`size-3.5 ${step.status === "working" ? "fill-primary text-primary animate-pulse" : "text-[#adb4be]"}`}
+                      className={`size-3.5 ${step.status === "working" ? "fill-primary text-primary animate-pulse" : "text-muted-text"}`}
                     />
                   )}
                   <span
@@ -200,7 +200,7 @@ export function ProcessingState({
 
         {/* Live event log */}
         {log.length > 0 && (
-          <div className="mt-3 border-t border-[#dce2ea] pt-2">
+          <div className="mt-3 border-t border-border pt-2">
             {log.slice(-3).map((entry, i) => (
               <p key={i} className="text-[9px] leading-4 text-muted-text truncate">
                 {entry}

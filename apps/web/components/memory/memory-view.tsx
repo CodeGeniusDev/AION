@@ -1,7 +1,16 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
-import { ArrowUpRight, BrainCircuit, Database, HardDrive, Search, Trash2, X } from "lucide-react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import {
+  ArrowUpRight,
+  BrainCircuit,
+  Database,
+  HardDrive,
+  Search,
+  Trash2,
+  X,
+} from "lucide-react";
 import {
   deleteMemoryRecord,
   getMemory,
@@ -12,14 +21,18 @@ import type { MemoryCategory, MemoryRecordOut } from "@/types";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
+import { usePageSearch } from "@/components/layout/page-search-provider";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { ProgressIndicator } from "@/components/ui/progress-indicator";
 import { SectionCard } from "@/components/ui/section-card";
+import { cn } from "@/utils/cn";
 
 const icons = [BrainCircuit, HardDrive, Database];
 const tones = ["bg-soft-peach", "bg-soft-blue", "bg-soft-green"];
 
 export function MemoryView() {
+  const searchParams = useSearchParams();
+  const { active, matches } = usePageSearch();
   const [categories, setCategories] = useState<MemoryCategory[]>([]);
   const [policies, setPolicies] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,6 +45,15 @@ export function MemoryView() {
   const [recordsLoading, setRecordsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showRecords, setShowRecords] = useState(false);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+
+  const visibleCategories = useMemo(
+    () =>
+      categories.filter((category) =>
+        matches(category.title, category.description),
+      ),
+    [categories, matches],
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -55,29 +77,43 @@ export function MemoryView() {
     };
   }, [loadAttempt]);
 
-  const loadRecords = useCallback(
-    async (query?: string) => {
-      setRecordsLoading(true);
-      try {
-        const result = query
-          ? await searchMemoryRecords(query, { limit: 50 })
-          : await listMemoryRecords({ limit: 50 });
-        setRecords(result.items);
-        setRecordsTotal(result.total);
-      } catch {
-        setRecords([]);
-        setRecordsTotal(0);
-      } finally {
-        setRecordsLoading(false);
-      }
-    },
-    [],
-  );
+  const loadRecords = useCallback(async (query?: string) => {
+    setRecordsLoading(true);
+    try {
+      const result = query
+        ? await searchMemoryRecords(query, { limit: 50 })
+        : await listMemoryRecords({ limit: 50 });
+      setRecords(result.items);
+      setRecordsTotal(result.total);
+    } catch {
+      setRecords([]);
+      setRecordsTotal(0);
+    } finally {
+      setRecordsLoading(false);
+    }
+  }, []);
 
   function openRecords() {
     setShowRecords(true);
     void loadRecords();
   }
+
+  // Deep links from global search (/memory?record=ID) open the records
+  // browser and highlight the real row once it loads.
+  useEffect(() => {
+    const record = searchParams.get("record");
+    if (!record) return;
+    setShowRecords(true);
+    setHighlightId(record);
+    void loadRecords();
+  }, [searchParams, loadRecords]);
+
+  useEffect(() => {
+    if (!highlightId || recordsLoading) return;
+    document
+      .getElementById(`memory-record-${highlightId}`)
+      ?.scrollIntoView({ block: "center" });
+  }, [highlightId, recordsLoading, records]);
 
   function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -128,12 +164,20 @@ export function MemoryView() {
         ) : (
           <>
             <div className="mt-5 grid gap-5 lg:grid-cols-3">
-              {categories.map((category, index) => {
+              {active && visibleCategories.length === 0 ? (
+                <div className="lg:col-span-3">
+                  <EmptyState
+                    title="No memory categories match the search"
+                    description="Nothing on this page matches the current filter. Clear the search to see everything again."
+                  />
+                </div>
+              ) : null}
+              {visibleCategories.map((category, index) => {
                 const Icon = icons[index % icons.length];
                 return (
                   <article
                     key={category.id}
-                    className="rounded-[24px] border bg-white p-5 sm:p-6">
+                    className="rounded-[24px] border bg-surface p-5 sm:p-6">
                     <span
                       className={`grid size-12 place-items-center rounded-[18px] ${tones[index % tones.length]}`}>
                       <Icon className="size-5" />
@@ -169,9 +213,7 @@ export function MemoryView() {
               description="How AION decides what context should be retained.">
               <div className="grid gap-3 sm:grid-cols-3">
                 {policies.map((item, index) => (
-                  <div
-                    key={item}
-                    className="rounded-[18px] bg-[#f7f9fc] p-4">
+                  <div key={item} className="rounded-[18px] bg-muted p-4">
                     <span className="text-[10px] font-semibold text-primary">
                       0{index + 1}
                     </span>
@@ -183,7 +225,7 @@ export function MemoryView() {
 
             {/* Records browser panel */}
             {showRecords && (
-              <div className="mt-5 rounded-[24px] border bg-white p-5 sm:p-6">
+              <div className="mt-5 rounded-[24px] border bg-surface p-5 sm:p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-lg font-semibold">Memory Records</h2>
@@ -194,21 +236,19 @@ export function MemoryView() {
                   <button
                     type="button"
                     onClick={() => setShowRecords(false)}
-                    className="rounded-full p-1.5 text-muted-text hover:bg-[#f2f4f7]"
+                    className="rounded-full p-1.5 text-muted-text hover:bg-muted"
                     aria-label="Close records">
                     <X className="size-4" />
                   </button>
                 </div>
-                <form
-                  onSubmit={handleSearch}
-                  className="mt-4 flex gap-2">
+                <form onSubmit={handleSearch} className="mt-4 flex gap-2">
                   <label className="relative flex-1">
                     <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-text" />
                     <span className="sr-only">Search memory</span>
                     <input
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="h-11 w-full rounded-full border bg-white pl-11 pr-4 text-sm"
+                      className="h-11 w-full rounded-full border bg-surface pl-11 pr-4 text-sm"
                       placeholder="Search saved context..."
                     />
                   </label>
@@ -230,17 +270,24 @@ export function MemoryView() {
                       {records.map((record) => (
                         <div
                           key={record.memory_id}
-                          className="flex items-start gap-3 py-3">
+                          id={`memory-record-${record.memory_id}`}
+                          className={cn(
+                            "flex items-start gap-3 py-3",
+                            highlightId === record.memory_id &&
+                              "rounded-[16px] bg-soft-blue/40 px-3",
+                          )}>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
-                              <span className="rounded-full bg-[#f2f4f7] px-2 py-0.5 text-[9px] font-medium text-primary">
+                              <span className="rounded-full bg-muted px-2 py-0.5 text-[9px] font-medium text-primary">
                                 {record.type}
                               </span>
                               <span className="text-[9px] text-muted-text">
                                 {record.verification_state}
                               </span>
                               <span className="ml-auto text-[9px] text-muted-text">
-                                {new Date(record.created_at).toLocaleDateString()}
+                                {new Date(
+                                  record.created_at,
+                                ).toLocaleDateString()}
                               </span>
                             </div>
                             <p className="mt-1 text-xs leading-5">
@@ -256,10 +303,8 @@ export function MemoryView() {
                           </div>
                           <button
                             type="button"
-                            onClick={() =>
-                              void handleDelete(record.memory_id)
-                            }
-                            className="shrink-0 rounded p-1 text-muted-text hover:text-[#b14a4a]"
+                            onClick={() => void handleDelete(record.memory_id)}
+                            className="shrink-0 rounded p-1 text-muted-text hover:text-danger-text"
                             aria-label={`Delete record ${record.memory_id}`}>
                             <Trash2 className="size-3.5" />
                           </button>

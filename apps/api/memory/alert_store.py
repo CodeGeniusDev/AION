@@ -43,10 +43,19 @@ class AlertStore:
                     category TEXT NOT NULL,
                     unread INTEGER NOT NULL DEFAULT 1,
                     tone TEXT NOT NULL DEFAULT 'info',
-                    created_at TEXT NOT NULL
+                    created_at TEXT NOT NULL,
+                    link TEXT NOT NULL DEFAULT ''
                 )
                 """
             )
+            # Additive column for databases created before `link` existed.
+            # SQLite has no IF NOT EXISTS for ALTER, so tolerate the dup.
+            try:
+                cursor.execute(
+                    "ALTER TABLE alerts ADD COLUMN link TEXT NOT NULL DEFAULT ''"
+                )
+            except sqlite3.OperationalError:
+                pass  # column already present (fresh schema or migrated)
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_alerts_unread ON alerts(unread)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_alerts_created_at ON alerts(created_at)")
 
@@ -62,7 +71,7 @@ class AlertStore:
 
     def create(
         self, *, title: str, description: str, category: str = "system",
-        tone: str = "info",
+        tone: str = "info", link: str | None = None,
     ) -> dict:
         """Create a new alert. Returns the created alert as a dict."""
         now = datetime.now(timezone.utc)
@@ -71,15 +80,40 @@ class AlertStore:
         with self._cursor() as cursor:
             cursor.execute(
                 """
-                INSERT INTO alerts (id, title, description, time, category, unread, tone, created_at)
-                VALUES (?, ?, ?, ?, ?, 1, ?, ?)
+                INSERT INTO alerts (id, title, description, time, category, unread, tone, created_at, link)
+                VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)
                 """,
-                (alert_id, title, description, time_str, category, tone, now.isoformat()),
+                (alert_id, title, description, time_str, category, tone, now.isoformat(), link or ""),
             )
-        return {
+        alert_data = {
             "id": alert_id, "title": title, "description": description,
             "time": time_str, "category": category, "unread": True, "tone": tone,
+            "created_at": now.isoformat(), "link": link or None,
         }
+        try:
+            from cognitive_bus.schema import CognitiveMessage
+            from routes.chat import workflow_runner
+            workflow_runner.bus.publish(
+                CognitiveMessage(
+                    task_id=alert_id,
+                    source_agent="alerts",
+                    target_agent=None,
+                    intent="alert.created",
+                    content=title,
+                    status="completed",
+                    context=alert_data,
+                )
+            )
+        except Exception:
+            pass
+        # Phase 2B: notify SSE hub (best-effort, same try/except guard).
+        try:
+            from realtime.publishers import publish_alert_created
+            from config import settings as _settings
+            publish_alert_created(_settings.default_tenant_id, alert_id=alert_id, category=category, tone=tone)
+        except Exception:
+            pass
+        return alert_data
 
     def list_all(self, *, unread_only: bool = False, limit: int = 50) -> list[dict]:
         """List alerts, newest first."""
@@ -130,7 +164,10 @@ class AlertStore:
             title = "Task failed"
             description = f'AION could not complete: "{message_preview[:80]}"'
             tone = "error"
-        return self.create(title=title, description=description, category="task", tone=tone)
+        return self.create(
+            title=title, description=description, category="task", tone=tone,
+            link=f"/tasks?open={task_id}",
+        )
 
 
 def _row_to_dict(row: sqlite3.Row) -> dict:
@@ -142,6 +179,8 @@ def _row_to_dict(row: sqlite3.Row) -> dict:
         "category": row["category"],
         "unread": bool(row["unread"]),
         "tone": row["tone"],
+        "created_at": row["created_at"],
+        "link": row["link"] or None,
     }
 
 

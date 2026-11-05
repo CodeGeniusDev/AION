@@ -14,7 +14,7 @@ class AppSettings(BaseModel):
     workspace_name: str = "AION Workspace"
     default_view: str = "dashboard"
     preferred_model: str = "gemini-3.6-flash"
-    theme: Literal["light", "system", "dim"] = "light"
+    theme: Literal["light", "dark", "system", "dim"] = "light"
     memory_enabled: bool = True
     verification_enabled: bool = True
     notify_task_completions: bool = True

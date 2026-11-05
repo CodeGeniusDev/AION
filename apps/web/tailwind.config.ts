@@ -2,6 +2,7 @@ import type { Config } from "tailwindcss";
 
 export default {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
+  darkMode: ["selector", '[data-theme="dark"]'],
   theme: {
     extend: {
       colors: {
@@ -12,6 +13,7 @@ export default {
         ring: "var(--ring)",
         primary: {
           DEFAULT: "var(--primary)",
+          hover: "var(--primary-hover)",
           foreground: "var(--primary-foreground)",
         },
         secondary: {
@@ -34,12 +36,45 @@ export default {
         sidebar: "var(--sidebar)",
         shell: "var(--app-shell)",
         navy: "var(--navy)",
+        avatar: {
+          navy: "var(--avatar-navy)",
+          blue: "var(--avatar-blue)",
+          teal: "var(--avatar-teal)",
+          violet: "var(--avatar-violet)",
+          amber: "var(--avatar-amber)",
+          rose: "var(--avatar-rose)",
+        },
         "aion-text": "var(--text)",
         "muted-text": "var(--muted-text)",
         "soft-blue": "var(--soft-blue)",
         "soft-peach": "var(--soft-peach)",
         "soft-grey": "var(--soft-grey)",
         "soft-green": "var(--soft-green)",
+        "surface-2": "var(--surface-2)",
+        success: {
+          soft: "var(--success-soft)",
+          text: "var(--success-text)",
+          border: "var(--success-border)",
+          solid: "var(--success-solid)",
+        },
+        warning: {
+          soft: "var(--warning-soft)",
+          text: "var(--warning-text)",
+          border: "var(--warning-border)",
+          solid: "var(--warning-solid)",
+        },
+        danger: {
+          soft: "var(--danger-soft)",
+          text: "var(--danger-text)",
+          border: "var(--danger-border)",
+          solid: "var(--danger-solid)",
+        },
+        info: {
+          soft: "var(--info-soft)",
+          text: "var(--info-text)",
+          border: "var(--info-border)",
+        },
+        "neutral-solid": "var(--neutral-solid)",
       },
       borderRadius: {
         lg: "var(--radius)",

@@ -1,13 +1,33 @@
+# AION MVP stack: API + web only.
+#
+# THE DESKTOP BRIDGE IS NOT IN THIS COMPOSE FILE — BY DESIGN. The bridge
+# performs real file, browser and desktop actions on the host it runs on;
+# putting it in a container with host mounts/volumes would hand a web-facing
+# stack direct access to the user's machine. It must run as a HOST process
+# (see README / docs/DEPLOYMENT.md: "desktop/ — aion-desktop-bridge"), and
+# the API reaches it over http://127.0.0.1:8080 with the shared secret.
 services:
   web:
     build:
       context: ./apps/web
       args:
+        # Inlined into the client bundle at build time; must be the URL the
+        # *browser* can reach the API at (localhost here, host/DNS name in
+        # a real deployment).
         NEXT_PUBLIC_API_URL: http://localhost:8000
     ports:
       - "3000:3000"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
+    healthcheck:
+      # node:22-alpine ships busybox wget — no extra install needed.
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3000/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
 
   api:
     build:
@@ -23,9 +43,30 @@ services:
     env_file:
       - ./apps/api/.env
     environment:
-      AION_MEMORY_DB_PATH: /data/aion_memory.db
+      # Persistence defaults for container use; the `:-` form means a value
+      # set in apps/api/.env wins over these fallbacks.
+      AION_MEMORY_DB_PATH: ${AION_MEMORY_DB_PATH:-/data/aion_memory.db}
+      AION_APPROVAL_DB_PATH: ${AION_APPROVAL_DB_PATH:-/data/aion_approvals.db}
     volumes:
       - aion_data:/data
+    healthcheck:
+      # python:3.13-slim has no curl/wget; use stdlib urllib. /health is
+      # the unauthenticated liveness route (200 when the service is up).
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4).status == 200 else 1)",
+        ]
+      interval: 15s
+      timeout: 6s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
 
 volumes:
+  # Holds aion_memory.db and aion_approvals.db (see the two *_DB_PATH vars
+  # above). `docker compose down` keeps it; `docker compose down -v` wipes
+  # approval/task history — never use -v on a real deployment.
   aion_data:
