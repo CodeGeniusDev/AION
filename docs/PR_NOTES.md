@@ -151,3 +151,23 @@ current_datetime) were not touched and their tests stay green.
 | `config.py`, `.env.example`                                                                                                                                                                                            | +`profile_db_path` setting, env documented                                                                                                               | follows the existing AION\_\*\_DB_PATH pattern                                                                                          |
 | `services/dashboard_service.py`, `services/task_service.py`, `routes/events.py`, `cognitive_bus/bus.py`, `services/approval_service.py`, `services/startup_guard.py`, `models/dashboard.py`, `models/notifications.py` | 1A–1C support: real dashboard intelligence fields, event stream wiring, startup warning tweaks consumed by the new header/shell                          | additive fields only — response shapes of existing endpoints unchanged                                                                  |
 | `tests/conftest.py` + 8 new test modules                                                                                                                                                                               | temp profile-DB env, agent-registry isolation snapshot, ~140 new tests (search, profile, alerts, redaction tables, shell endpoints)                      | test data lives only in temp/in-memory DBs                                                                                              |
+
+## 10. UI Overhaul Phase 2B — shared apps/api files (Real-time SSE Event Hub)
+
+All changes are ADDITIVE. The approval gate, threat model, Gemini tool
+declarations and all existing response shapes remain untouched.
+
+| File | Change | Why |
+| ---- | ------ | --- |
+| `realtime/__init__.py`, `realtime/hub.py`, `realtime/publishers.py` (NEW) | EventHub (ring buffer, per-client queues, backpressure, connection cap, thread-safe publish), typed publisher wrappers | Core SSE infrastructure: tenant-scoped notifications without leaking secrets; hub failure NEVER blocks the approval gate |
+| `routes/stream.py` (NEW) | `GET /api/stream` (text/event-stream) — auth via `get_current_principal`, Last-Event-ID resume, 15 s heartbeat, 503 on cap | Single real-time endpoint for the frontend RealtimeProvider (Phase 2C) |
+| `main.py` (2B diff) | +2 lines: `from routes.stream import router as stream_router` + `app.include_router(stream_router, prefix="/api")` | Pure additive wiring |
+| `services/approval_service.py` | 5 `publish_approval_*()` calls after committed transitions: created, rejected, running, completed, failed | Terminal approval events for live UI updates; payloads carry ONLY ids + status strings |
+| `memory/task_store.py` | 1 `publish_task_updated()` call in `update_status()` after DB write | Every task transition fires an SSE event regardless of caller |
+| `memory/alert_store.py` | 1 `publish_alert_created()` call in `create()` | New alerts notify subscribers in real time |
+| `memory/consolidation.py` | 1 `publish_memory_written()` call after episodic+semantic writes | Memory consolidation signals propagate to the UI |
+| `routes/chat.py` | 2 publisher calls after saving an assistant reply: `publish_conversation_updated`, `publish_task_updated` | Conversation and task state changes are live |
+| `routes/desktop.py` | 2 `publish_bridge_status()` calls in `/api/desktop/health` (reachable and not) | Bridge connectivity is visible without polling |
+| `services/schedule_runner.py` | 1 `publish_schedule_fired()` call after successful fire | Scheduled approval requests notify the UI |
+| `services/workflows_service.py` | 2 `publish_workflow_run_updated()` calls (failure path, success path) | Workflow completion is real-time |
+| `tests/test_realtime_hub_phase2b.py` (NEW) | 9 tests: ordering, Last-Event-ID resume, tenant isolation, redaction, backpressure drop-oldest, connection cap, hub-failure isolation | Proves the 6 contract points required by the spec |
