@@ -24,6 +24,7 @@ from routes.memory import router as memory_router
 from routes.research import router as research_router
 from routes.search import router as search_router
 from routes.settings import router as settings_router
+from routes.stream import router as stream_router
 from routes.profile import router as profile_router
 from routes.system import router as system_router
 from routes.tasks import router as tasks_router
@@ -93,6 +94,8 @@ app.include_router(desktop_router, prefix="/api")
 app.include_router(approvals_router, prefix="/api")
 app.include_router(schedules_router, prefix="/api")
 app.include_router(voice_router, prefix="/api")
+# Phase 2B: SSE event hub — GET /api/stream (business events, tenant-scoped).
+app.include_router(stream_router, prefix="/api")
 # Phase 2A: /api/_test/* fixture endpoints. Handlers self-guard with
 # AION_TEST_MODE and return 404 when the flag is off, so the router is
 # always safe to include — production traffic can never distinguish it
