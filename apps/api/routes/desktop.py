@@ -35,11 +35,26 @@ async def desktop_health(
     try:
         payload = client.health()
     except BridgeError:
+        # Phase 2B: notify SSE subscribers of bridge status change.
+        try:
+            from realtime.publishers import publish_bridge_status
+            from auth.dependency import resolve_tenant_id as _resolve
+            publish_bridge_status(_resolve(principal), reachable=False, bridge_status=None)
+        except Exception:
+            pass
         return DesktopHealthResponse(reachable=False, status=None)
     status = payload.get("status") if isinstance(payload, dict) else None
-    return DesktopHealthResponse(
+    result = DesktopHealthResponse(
         reachable=True, status=status if isinstance(status, str) else "healthy",
     )
+    # Phase 2B: notify SSE subscribers of bridge status change.
+    try:
+        from realtime.publishers import publish_bridge_status
+        from auth.dependency import resolve_tenant_id as _resolve
+        publish_bridge_status(_resolve(principal), reachable=True, bridge_status=result.status)
+    except Exception:
+        pass
+    return result
 
 
 @router.post("/desktop/execute", response_model=ApprovalExecuteResponse, status_code=202)

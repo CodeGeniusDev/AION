@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException
 
+from config import settings
 from models.tasks import Task, TasksResponse
 from routes.chat import workflow_runner
 from services.task_service import (

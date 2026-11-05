@@ -109,6 +109,12 @@ class ScheduleRunner:
                 "schedule %s fired -> pending approval %s (status %s)",
                 schedule.id, record.id, status,
             )
+            # Phase 2B: notify SSE subscribers of schedule fire.
+            try:
+                from realtime.publishers import publish_schedule_fired
+                publish_schedule_fired(schedule.tenant_id, schedule_id=schedule.id, approval_id=record.id)
+            except Exception:
+                pass
             fired.append(updated or schedule)
         return fired
 

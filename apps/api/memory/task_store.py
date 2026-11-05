@@ -205,7 +205,16 @@ class SQLiteTaskStore(TaskStoreInterface):
                 """,
                 (status, now, task_id),
             )
-        return self.get(task_id)
+        result = self.get(task_id)
+        # Phase 2B: notify SSE subscribers of task status change.
+        if result is not None:
+            try:
+                from realtime.publishers import publish_task_updated
+                from config import settings as _settings
+                publish_task_updated(_settings.default_tenant_id, task_id=task_id, status=result.status)
+            except Exception:
+                pass
+        return result
 
     def update_output(self, task_id: str, output: ToolOutput) -> Task | None:
         now = datetime.now(timezone.utc).isoformat()

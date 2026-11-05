@@ -23,6 +23,10 @@ from dataclasses import dataclass
 from typing import Any
 
 from config import settings
+from realtime.publishers import (
+    publish_approval_created,
+    publish_approval_updated,
+)
 from memory.approval_store import ApprovalStore, canonical_hash, get_default_approval_store
 from models.approval import ApprovalRecord
 from services.desktop_bridge_client import BridgeError, DesktopBridgeClient, new_grant_token
@@ -109,6 +113,9 @@ class ApprovalService:
             detail=f"tool={tool} params_hash={canonical_hash(parameters)[:12]} protected={is_protected(tool)}",
         )
         self._push_pending_alert(record)
+        # Phase 2B: notify SSE subscribers that an approval was created.
+        # Fire-and-forget; hub failure cannot alter the ledger row above.
+        publish_approval_created(tenant_id, approval_id=record.id, task_id=task_id, tool=tool)
         return record
 
     def _push_pending_alert(self, record: ApprovalRecord) -> None:
@@ -152,6 +159,7 @@ class ApprovalService:
             actor_key_id=actor_key_id, tenant_id=tenant_id, detail=f"tool={rejected.tool}",
         )
         self._sync_task(rejected.task_id, "failed", reason="rejected by approver")
+        publish_approval_updated(tenant_id, approval_id=rejected.id, task_id=rejected.task_id, status="rejected")
         return rejected
 
     # ------------------------------------------------------------------
@@ -199,6 +207,7 @@ class ApprovalService:
             actor_key_id=actor_key_id, tenant_id=tenant_id, detail="dispatch scheduled",
         )
         self._sync_task(claimed.task_id, "running")
+        publish_approval_updated(tenant_id, approval_id=claimed.id, task_id=claimed.task_id, status="running")
         return claimed
 
     def dispatch(self, claimed: ApprovalRecord, *, tenant_id: str) -> ApprovalOutcome:
@@ -230,6 +239,9 @@ class ApprovalService:
                 tenant_id=tenant_id, detail=f"bridge failure: {reason}",
             )
             self._sync_task(claimed.task_id, "failed", reason=f"bridge failure: {reason}")
+            publish_approval_updated(
+                tenant_id, approval_id=claimed.id, task_id=claimed.task_id, status="failed",
+            )
             raise ApprovalError(502, f"Desktop execution failed: {reason}") from exc
 
         success = bool(execution.get("success", False))
@@ -241,6 +253,9 @@ class ApprovalService:
                 detail=f"tool={claimed.tool} success=true duration_ms={execution.get('duration_ms')}",
             )
             self._sync_task(claimed.task_id, "completed")
+            publish_approval_updated(
+                tenant_id, approval_id=claimed.id, task_id=claimed.task_id, status="completed",
+            )
         else:
             # The grant was consumed — the tool ran and reported failure.
             # The bridge reports errors both top-level and nested under
@@ -258,6 +273,9 @@ class ApprovalService:
                 tenant_id=tenant_id, detail=f"tool={claimed.tool} success=false",
             )
             self._sync_task(claimed.task_id, "failed", reason=error)
+            publish_approval_updated(
+                tenant_id, approval_id=claimed.id, task_id=claimed.task_id, status="failed",
+            )
         final = self.store.get(claimed.id)
         assert final is not None
         return ApprovalOutcome(record=final, execution=execution)

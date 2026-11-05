@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from auth.dependency import get_current_principal, require_role, resolve_tenant_id
 from config import settings
+from realtime.publishers import publish_conversation_updated, publish_task_updated
 from memory.alert_store import AlertStore
 from memory.conversation_store import ConversationStore, ConversationSummary
 from models.auth import AuthenticatedPrincipal
@@ -117,6 +118,10 @@ async def chat(
     # Save assistant response
     if response.status == "completed":
         conversation_store.save_assistant_message(convo_id, response.answer, task_id=response.task_id)
+
+    # Phase 2B: signal conversation and task updates to SSE subscribers.
+    publish_conversation_updated(tenant_id, conversation_id=convo_id)
+    publish_task_updated(tenant_id, task_id=response.task_id, status=response.status)
 
     # Auto-generate a notification alert for this task
     try:

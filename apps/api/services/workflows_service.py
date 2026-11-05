@@ -129,8 +129,15 @@ async def run_workflow(
         store.finish_run(workflow_id, error=str(exc)[:300])
         final = store.get(workflow_id)
         assert final is not None
+        # Phase 2B: notify SSE subscribers of workflow run state change.
+        try:
+            from realtime.publishers import publish_workflow_run_updated
+            from config import settings as _settings
+            publish_workflow_run_updated(_settings.default_tenant_id, workflow_id=workflow_id, status="failed")
+        except Exception:
+            pass
         return final.to_public(), WorkflowRunResult(
-            task_id="", status="failed",
+            task_id="",  status="failed",
             answer="The workflow run failed before producing a response.",
             confidence=0.0, processing_time_ms=0, error=str(exc)[:300],
         )
@@ -138,6 +145,13 @@ async def run_workflow(
     error = response.error if response.status == "failed" else None
     finished = store.finish_run(workflow_id, last_task_id=response.task_id, error=error)
     assert finished is not None
+    # Phase 2B: notify SSE subscribers of workflow run state change.
+    try:
+        from realtime.publishers import publish_workflow_run_updated
+        from config import settings as _settings
+        publish_workflow_run_updated(_settings.default_tenant_id, workflow_id=workflow_id, status=response.status)
+    except Exception:
+        pass
     return (
         finished.to_public(),
         WorkflowRunResult(

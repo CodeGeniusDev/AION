@@ -106,6 +106,13 @@ class AlertStore:
             )
         except Exception:
             pass
+        # Phase 2B: notify SSE hub (best-effort, same try/except guard).
+        try:
+            from realtime.publishers import publish_alert_created
+            from config import settings as _settings
+            publish_alert_created(_settings.default_tenant_id, alert_id=alert_id, category=category, tone=tone)
+        except Exception:
+            pass
         return alert_data
 
     def list_all(self, *, unread_only: bool = False, limit: int = 50) -> list[dict]:
